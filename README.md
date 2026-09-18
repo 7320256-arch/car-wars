@@ -66,3 +66,7 @@ node tools/all.js
 
 Siete suites que ejercitan shaders, geometría, mapas, físicas/IA, construcción del mundo
 y el juego entero (simulación + render con GL simulado). Detalle en `docs/ARCHITECTURE.md`.
+
+
+## Progressive Web App (PWA)
+La aplicación incluye `manifest.webmanifest`, iconos instalables, `favicon.svg`, metadatos para Android/iOS/Windows y un `sw.js` que precarga el shell del juego para permitir el uso offline después de la primera visita. En GitHub Pages debe servirse por HTTPS y publicarse desde `main`.

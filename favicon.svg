@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#111b39"/><stop offset="1" stop-color="#070a12"/></linearGradient>
+    <linearGradient id="car" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#65e7ff"/><stop offset="1" stop-color="#2b79ff"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <path d="M28 372c103-99 207-127 456-79" fill="none" stroke="#263b70" stroke-width="30" stroke-linecap="round"/>
+  <path d="M28 372c103-99 207-127 456-79" fill="none" stroke="#65e7ff" stroke-width="5" stroke-dasharray="22 20" opacity=".8"/>
+  <g filter="url(#glow)"><path d="M91 306l34-99c6-18 23-30 42-30h160c19 0 36 12 42 30l34 99v61H91z" fill="url(#car)" stroke="#c9f8ff" stroke-width="7"/>
+  <path d="M153 207h176l34 62H119z" fill="#101b38" stroke="#8eefff" stroke-width="6"/>
+  <path d="M176 215l-19 45h78v-45zm91 0v45h78l-19-45z" fill="#263e71"/>
+  <circle cx="145" cy="370" r="33" fill="#070a12" stroke="#d9fbff" stroke-width="8"/><circle cx="367" cy="370" r="33" fill="#070a12" stroke="#d9fbff" stroke-width="8"/>
+  <path d="M106 322h300" stroke="#eafcff" stroke-width="8" stroke-linecap="round"/><path d="M76 322h25M411 322h25" stroke="#ff5b67" stroke-width="12" stroke-linecap="round"/></g>
+</svg>
