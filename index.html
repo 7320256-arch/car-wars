@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#070a12">
+<title>CAR WARS 3D — circuito local, sin conexión</title>
+<meta name="description" content="Juego de coches 3D completo en WebGL: 4 circuitos, 5 modos, IA, derrapes, partículas y sonido procedural. Funciona desde archivos locales.">
+<style>
+/* crítico: el lienzo 3D a pantalla completa funciona aunque la hoja externa no cargue */
+html,body{margin:0;height:100%;overflow:hidden;background:#070a12;color:#eaf2ff;
+  font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#app{position:fixed;inset:0}
+canvas#gl,canvas#hud{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+canvas#hud{pointer-events:none}
+#boot{position:fixed;inset:0;display:grid;place-content:center;gap:14px;z-index:40;text-align:center;
+  background:linear-gradient(180deg,#0a0f1c,#05070d)}
+#boot .bar{width:min(420px,72vw);height:6px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden;margin:0 auto}
+#boot .bar b{display:block;height:100%;width:6%;background:linear-gradient(90deg,#4ad2ff,#ff7a3d)}
+#boot p{margin:0;color:#9fb2d0;font-size:13px}
+#boot .errdet{font:12px/1.5 ui-monospace,monospace;color:#ffb4b4;max-width:min(720px,88vw);margin:0 auto;text-align:left;
+  background:rgba(255,60,60,.08);border:1px solid rgba(255,90,90,.3);padding:10px 12px;border-radius:10px;white-space:pre-wrap}
+body:not(.playing) #ui{position:fixed;inset:0;z-index:30}
+</style>
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230b1020'/><path d='M12 38l6-14h28l6 14v8H44a4 4 0 11-8 0H28a4 4 0 11-8 0h-8z' fill='%234ad2ff'/></svg>">
+</head>
+<body>
+<div id="app">
+  <canvas id="gl" tabindex="0" aria-label="Vista 3D del juego"></canvas>
+  <canvas id="hud" aria-hidden="true"></canvas>
+  <canvas id="mini" class="mini" aria-hidden="true"></canvas>
+  <div class="fps" id="fps">—</div>
+  <div class="topleft" id="topleft"></div>
+  <div class="gearhint" id="gearhint">
+    <span><kbd>W A S D</kbd> conducir</span><span><kbd>SHIFT</kbd>/<kbd>ESPACIO</kbd> derrape</span>
+    <span><kbd>E</kbd> nitro</span><span><kbd>C</kbd> cámara</span><span><kbd>R</kbd> reponer</span>
+    <span><kbd>P</kbd> pausa</span><span><kbd>M</kbd> sonido</span>
+  </div>
+  <div id="ui"></div>
+  <div id="boot">
+    <h1 class="lg">CAR <i>WARS</i> 3D</h1>
+    <div class="bar"><b id="bootbar"></b></div>
+    <p id="bootmsg">preparando motor WebGL…</p>
+  </div>
+</div>
+
+<script>
+/* Comprobación de entorno ANTES de cargar nada: si falta WebGL2 se avisa bien. */
+window.__cwBoot = function (ok, msg, detail) {
+  var b = document.getElementById('boot'), m = document.getElementById('bootmsg');
+  if (!ok) { b.classList.add('err'); m.textContent = msg; if (detail) { var d = document.createElement('div'); d.className = 'errdet'; d.textContent = detail; b.appendChild(d); } }
+  return b;
+};
+(function () {
+  var c = document.createElement('canvas');
+  var gl = null;
+  try { gl = c.getContext('webgl2', { failIfMajorPerformanceCaveat: false }); } catch (e) { gl = null; }
+  if (!gl) {
+    window.__cwBoot(false, 'Este navegador no expone WebGL2. Actualiza Chrome o activa la aceleración hardware (chrome://flags → Aceleración de hardware).',
+      'contexto webgl2 = ' + gl);
+    document.getElementById('ui').style.display = 'none';
+    window.__cwNoGL = true;
+  }
+})();
+</script>
+
+<script src="js/core.js"></script>
+<script src="js/math3d.js"></script>
+<script src="js/textures.js"></script>
+<script src="js/primitives.js"></script>
+<script src="js/renderer.js"></script>
+<script src="js/meshes.js"></script>
+<script src="js/mapdata.js"></script>
+<script src="js/world.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/game.js"></script>
+
+<script>
+(function () {
+  'use strict';
+  if (window.__cwNoGL) return;
+  if (typeof window.CW === 'undefined') {
+    /* Los .js no se cargaron: casi siempre es que el HTML se movió solo, sin sus carpetas. */
+    var faltan = [], pr = 'js/';
+    ['core', 'math3d', 'renderer', 'game'].forEach(function (n) { faltan.push(pr + n + '.js'); });
+    window.__cwBoot(false,
+      'Falta el código del juego junto al HTML',
+      'No se pudieron cargar los ' + faltan.length + ' scripts (window.CW = ' + typeof window.CW + ').\n' +
+      '\nSi descargaste sólo "car_wars.html", tienes dos opciones:\n' +
+      '  A) Usa el archivo único  car_wars_standalone.html  (no necesita carpetas).\n' +
+      '  B) Quédate con la carpeta completa:  car_wars/  con  css/  y  js/  dentro, y abre\n' +
+      '     car_wars/car_wars.html  (el HTML debe estar DENTRO de la carpeta, al lado de js/).\n' +
+      '\nComprobado: ' + (window.__cwProbed || 'sin sondeo'));
+    return;
+  }
+  var G = window.CW, D = document;
+  var cv = D.getElementById('gl'), hudC = D.getElementById('hud'), mini = D.getElementById('mini');
+  var boot = D.getElementById('boot'), bar = D.getElementById('bootbar'), msg = D.getElementById('bootmsg');
+  var fpsEl = D.getElementById('fps');
+  function setBar(p, t) { bar.style.width = Math.round(Math.max(0.04, Math.min(1, p)) * 100) + '%'; if (t) msg.textContent = t; }
+
+  var R, game;
+  try {
+    R = new G.Renderer(cv);
+  } catch (e) {
+    window.__cwBoot(false, 'No se pudo iniciar el renderizador WebGL2.', String(e && e.stack || e));
+    return;
+  }
+  setBar(0.14, 'generando texturas…');
+
+  game = new G.Game({ canvas: cv, renderer: R, lowFx: G.isMobileish });
+  window.__cwGame = game;
+  game.input = new G.Input();
+  game.headless = false;
+  game.autoQual = true;
+  game.setQuality(G.isMobileish ? 'low' : 'med');
+  game.hud = new G.HUD({ canvas: hudC, minimap: mini });
+  function resize() {
+    var w = D.documentElement.clientWidth, h = D.documentElement.clientHeight;
+    game.hud.resize(w, h);
+  }
+  window.addEventListener('resize', resize); resize();
+
+  /* el primer gesto desbloquea el audio */
+  var unlock = function () { game.sound.resume(); D.removeEventListener('pointerdown', unlock); D.removeEventListener('keydown', unlock); };
+  D.addEventListener('pointerdown', unlock); D.addEventListener('keydown', unlock);
+
+  try {
+    var ui = G.boot({ canvas: cv, game: game, ui: D.getElementById('ui'), hud: hudC, progress: setBar });
+  } catch (e) {
+    window.__cwBoot(false, 'Error al construir la interfaz.', String(e && e.stack || e));
+    return;
+  }
+
+  /* precarga del primer mundo para que el menú arranque ya con el circuito montado */
+  setBar(0.3, 'montando Bahía del Sol…');
+  setTimeout(function () {
+    try {
+      game.attachMode(G.MODES.race);
+      game.loadMap(G.MAPS[0], setBar);
+      game.spawn(G.CARS[0].id, { laps: 3 });
+      setBar(0.98, 'listo');
+    } catch (e) {
+      window.__cwBoot(false, 'Error generando el mundo 3D.', String(e && e.stack || e));
+      return;
+    }
+    try {
+      var hojaCargada = false;
+      for (var i = 0; i < document.styleSheets.length; i++) {
+        var hh = document.styleSheets[i];
+        if (hh.href && /style\.css$/.test(hh.href)) { hojaCargada = true; break; }
+      }
+      if (!hojaCargada && !window.__cwStandalone) game.hud.toast('nota: falta css/style.css (sin estilos)', 4);
+    } catch (e) { }
+    boot.style.transition = 'opacity .45s'; boot.style.opacity = '0';
+    setTimeout(function () { boot.style.display = 'none'; }, 460);
+    D.body.classList.add('playing');
+    game.running = true;
+    game._last = 0;
+    game.frame();
+    /* HUD superior: modo/mapa/fps en vivo */
+    var tl = D.getElementById('topleft');
+    setInterval(function () {
+      fpsEl.textContent = Math.round(game.fps) + ' fps · ' + (R.stats ? R.stats.draws : 0) + ' draws · ' + ((R.stats ? R.stats.tris : 0) / 1000 | 0) + 'k tris';
+      if (!game.world) return;
+      var p = game.player, q = p ? Math.round(p.speed * 3.6) : 0;
+      tl.innerHTML = '<div class="badge">circuito <b>' + game.spec.name + '</b></div>' +
+        '<div class="badge">modo <b>' + game.mode.name + '</b></div>' +
+        '<div class="badge">marcha <b>' + (p ? 'M' + Math.max(1, Math.min(6, 1 + Math.round(Math.log(Math.max(1, q)) / Math.log(70)))) : '-') + '</b></div>';
+    }, 500);
+    /* errores de runtime a la consola + aviso en pantalla */
+    window.__cwOnError = function (m) {
+      if (!m || /ResizeObserver|AudioContext/.test(m)) return;
+      var d = D.createElement('div');
+      d.className = 'errdet'; d.style.cssText = 'position:absolute;left:12px;bottom:12px;z-index:60';
+      d.textContent = 'aviso: ' + m;
+      D.getElementById('app').appendChild(d);
+      setTimeout(function () { d.remove(); }, 6000);
+    };
+  }, 60);
+})();
+</script>
+</body>
+</html>
