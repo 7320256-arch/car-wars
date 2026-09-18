@@ -105,16 +105,26 @@ for (const spec of G.MAPS) {
             g.input.touch.thr = 1; g.input.touch.brake = 0; g.input.touch.steer = 0;
           }
         } else if (mode.id === 'drift') {
-          /* como un jugador: lanzar el eje trasero con la tecla y CONTRA-VOLANTEAR
-             para sostener el ángulo; se vuelve a dar tecla si se cierra */
+          /* como un jugador: PULSO de freno de mano (0,4 s) para soltar el eje
+             trasero y luego contravolanteo proporcional al ángulo. Con la mano
+             puesta todo el rato el coche se queda en un donut lento por debajo de
+             la velocidad que puntúa: el círculo de fricción premia el pulso+gas. */
           const p = g.player;
           g.input.touch.active = true;
           g.input.touch.thr = 1;
+          g.input.touch.brake = 0;
+          const cl = (v, a, b) => (v < a ? a : (v > b ? b : v));
           const ang = Math.abs(p.slipAngle || 0);
           const slip = p.vr;
-          if (ang < 0.30 && !g._dhold) { g.input.touch.hand = true; g._dhold = 1; g.input.touch.steer = 0.9 * Math.sign(p.steer || 1); }
-          else { g.input.touch.hand = ang < 0.22; g.input.touch.steer = clampAbs(-Math.sign(slip || 1) * 0.45); }
-          if (p.speed < 11) { g.input.touch.hand = true; g.input.touch.steer = 0.9; }
+          g._dt = (g._dt || 0) + DT;
+          if (p.speed > 12 && ang < 0.22 && g._dstart == null) g._dstart = g._dt;
+          if (ang > 0.34) g._dstart = null;
+          const pulsing = g._dstart != null && (g._dt - g._dstart) < 0.4;
+          g.input.touch.hand = pulsing ? 1 : 0;
+          if (pulsing) g.input.touch.steer = clampAbs(0.85 * Math.sign(p.steer || 1));
+          else g.input.touch.steer = clampAbs(-Math.sign(slip || 1) * cl(Math.abs(slip) / 7, 0.22, 0.9));
+          if (ang > 0.78) { g.input.touch.thr = 0.5; g.input.touch.hand = 0; }
+          if (p.speed < 7) { g.input.touch.hand = 0; g.input.touch.steer = 0; g.input.touch.thr = 1; }
         }
       });
     } catch (e) { e2 = e; }
@@ -192,7 +202,9 @@ for (const spec of G.MAPS) {
     g.input.touch.hand = false; g.input.touch.brake = 0;
     const p = g.player;
     frames++; if (p.drifting) driftFrames++;
-    maxSlip = Math.max(maxSlip, Math.abs(p.vr));
+    /* los toques con el tráfico también cruzan el coche: eso no es «irse de lado
+       por conducir normal», así que no cuenta (hitTimer avisa del impacto) */
+    if (p.hitTimer < 0.06) maxSlip = Math.max(maxSlip, Math.abs(p.vr));
     if (Math.abs(p.yawRate) > 2.3) spins++;
   });
   const pct = 100 * driftFrames / Math.max(1, frames);
@@ -217,7 +229,9 @@ for (const spec of G.MAPS) {
   const lap0 = p.lap;
   drive(game, 6, (g) => { const q = g.player; G.aiDrive(q, g.world, DT, 1.0, g.cars); g.input.touch.thr = 1; g.input.touch.steer = clampAbs(q.steer); });
   ok(p.lap === lap0 + 1, 'cruzar la meta con los checkpoints hechos cuenta vuelta (' + p.lap + ')');
-  ok(p.lapTimes.length === 1 && p.lapTimes[0] > 0.5 && p.lapTimes[0] < 5, 'tiempo de vuelta parcial plausible (' + (p.lapTimes[0] || 0).toFixed(2) + ' s)');
+  /* el tope es la duración del ensayo (6 s); lo que se comprueba de verdad es que
+     la vuelta no se cuente de golpe, de ahí el mínimo de 0,5 s */
+  ok(p.lapTimes.length === 1 && p.lapTimes[0] > 0.5 && p.lapTimes[0] < 5.9, 'tiempo de vuelta parcial plausible (' + (p.lapTimes[0] || 0).toFixed(2) + ' s)');
   ok(p.bestLap > 0, 'mejor vuelta registrada (' + p.bestLap.toFixed(2) + ')');
   /* cruzar la meta sin checkpoints NO cuenta */
   const lap1 = p.lap, lt = p.lapTimes.length;
@@ -361,6 +375,76 @@ for (const spec of G.MAPS) {
   }
 }
 
+/* ---------- 2g. audio: motores y música avanzan de verdad en el bucle ---------- */
+{
+  /* el bug histórico: spawn() creaba las voces pero NADIE llamaba a Sound.update()
+     -> motores mudos y música sin secuenciar. Se prueba con un AudioContext de
+     mentira y pasando por Game.frame(), que es el camino real. */
+  const log = { params: 0 };
+  const P = (v) => {
+    const p = { value: v };
+    p.setValueAtTime = (x) => { p.value = x; log.params++; return p; };
+    p.linearRampToValueAtTime = (x) => { p.value = x; return p; };
+    p.exponentialRampToValueAtTime = (x) => { p.value = x; return p; };
+    p.setTargetAtTime = (x) => { p.value = x; log.params++; return p; };
+    p.cancelScheduledValues = () => p;
+    return p;
+  };
+  const node = (o) => Object.assign({ connect() { return this; }, disconnect() { } }, o || {});
+  global.window.AudioContext = function () {
+    return {
+      sampleRate: 48000, state: 'running', currentTime: 0, destination: node(),
+      createGain: () => node({ gain: P(1) }),
+      createOscillator: () => node({ type: 'sine', frequency: P(440), detune: P(0), start() { }, stop() { } }),
+      createBiquadFilter: () => node({ type: 'lowpass', frequency: P(900), Q: P(1), gain: P(0) }),
+      createBufferSource: () => node({ buffer: null, loop: false, playbackRate: P(1), start() { }, stop() { } }),
+      createStereoPanner: () => node({ pan: P(0) }),
+      createDynamicsCompressor: () => node({ threshold: P(0), knee: P(0), ratio: P(1), attack: P(0), release: P(0) }),
+      createBuffer: (a, len) => ({ getChannelData: () => new Float32Array(len) }),
+      resume: () => Promise.resolve()
+    };
+  };
+  const S = game.sound;
+  const ac0 = game.autoQual, pa0 = game.paused;
+  game.autoQual = false;
+  S.dead = false; S.ok = false; S.voices.length = 0; S.pending.length = 0;
+  ok(S.tryStart() === true, 'audio: hay contexto -> el motor de sonido arranca');
+  game.spawn(G.CARS[1].id, { laps: 2 });
+  game.running = true; game.paused = false;
+  game.setMusic(true, true);
+  ok(S.voices.length === game.cars.length && S.voices.length > 1, 'audio: una voz por coche de la parrilla (' + S.voices.length + ')');
+  ok(S.voices[0].player === true, 'audio: la voz 0 es la del jugador');
+  ok(new Set(S.voices.map(v => v.cyl)).size >= 3, 'audio: cada motor se sintetiza con SU número de cilindros');
+  ok(S.voices.every(v => v.redline > 4000 && v.redline < 12000), 'audio: el corte de encendido llega al sintetizador');
+  const c0 = game.input.touch;
+  c0.active = true; c0.thr = 1; c0.steer = 0; c0.brake = 0; c0.hand = false;
+  const b0 = S.beat, params0 = log.params;
+  for (let i = 0; i < 90; i++) {
+    if (i === 40) c0.steer = 0.5;
+    game.frame(1000 / 60 * (i + 1));
+  }
+  ok(log.params > params0 + 50, 'audio: Game.frame avanza los parámetros de las voces (' + (log.params - params0) + ' ajustes en 90 f)');
+  ok(S.beat > b0, 'audio: la música se secuencia desde el bucle (' + (S.beat - b0) + ' golpes)');
+  ok(S.voices[0].g.gain.value > 0, 'audio: con el gas metido tu motor suena (' + S.voices[0].g.gain.value.toFixed(3) + ')');
+  ok(S.voices.length < 2 || isFinite(S.voices[1].pan.pan.value), 'audio: los rivales se panorama (sin NaN)');
+  ok(S.intensity > 0.05 && isFinite(S.intensity), 'audio: la intensidad de carrera alimenta la música (' + S.intensity.toFixed(2) + ')');
+  ok(isFinite(S.skid.g.gain.value) && S.skid.g.gain.value >= 0, 'audio: rodadas con valor válido');
+  ok(game.cars.every(c => isFinite(c.engineRPM) && c.engineRPM > 600), 'audio: rpm finito y por encima del ralentí en todos');
+  game.paused = true;
+  const bp = S.beat;
+  for (let i = 0; i < 30; i++) game.frame(1000 / 60 * (91 + i));
+  ok(S.beat === bp, 'audio: en pausa la música no avanza');
+  game.paused = false;
+  game.setMusic(false, true);
+  ok(S.busMusic.gain.value === 0, 'audio: la casilla «Música» silencia el bus');
+  game.setMusic(true, true);
+  ok(S.busMusic.gain.value > 0, 'audio: reactivarla vuelve a abrir el bus');
+  c0.active = false; c0.thr = 0; c0.steer = 0;
+  /* devolver el audio al estado «sin AudioContext» que el resto de la suite espera */
+  S.stopVoices(); S.ok = false; S.dead = true; S.ctx = null;
+  delete global.window.AudioContext;
+  game.autoQual = ac0; game.paused = pa0;
+}
 /* ---------- 3. fin de carrera + récords ---------- */
 {
   game.attachMode(G.MODES.race);

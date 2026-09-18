@@ -2,7 +2,7 @@
 /* Comprobación de físicas e IA sin WebGL: mundo "lite" (track + máscara + altura falsa). */
 'use strict';
 global.window = {};
-global.navigator = { maxTouchPoints: 0, userAgent: 'node' };
+Object.defineProperty(global, 'navigator', { configurable: true, value: { maxTouchPoints: 0, userAgent: 'node' } });
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 for (const f of ['js/core.js', 'js/math3d.js', 'js/primitives.js', 'js/renderer.js', 'js/meshes.js', 'js/mapdata.js', 'js/entities.js'])

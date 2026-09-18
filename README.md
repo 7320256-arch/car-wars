@@ -26,17 +26,28 @@ abrir `http://localhost:8000/car_wars.html`.
 |---|---|---|---|
 | acelerar / frenar | `W`/`S` o ↑/↓ | RT / LT | pedales derecha |
 | girar | `A`/`D` o ←/→ | stick izq. | pads ◀ ▶ |
-| freno de mano (derrape) | `Espacio` | ✕ o LB/RB | DERRAPE |
-| nitro | `Shift` o `E` | ◻ | NITRO |
+| freno de mano (derrape) | `Espacio` o `Shift` | ✕ o LB/RB | DERRAPE |
+| nitro | `E` o `Ctrl` der. | ◻ | NITRO |
 | cámara (4 vistas) | `C` | Back | — |
 | reponer en pista | `R` | — | — |
 | luces / minimapa / pausa | `L` / `Tab` / `P` o `Esc` | Start | — |
 | silencio | `M` | — | — |
 
+En el menú hay casillas para **Sombras**, **Humo y chispas**, **Sonido** y **Música de fondo**
+(la última se recuerda entre sesiones, como el resto de ajustes).
+
 En pantallas táctiles los botones aparecen solos; con mando conectado se usa al instante
 (no hay que pulsar nada). El primer clic/tecla activa el audio (política de Chrome).
 
 ## Qué incluye
+- **Cinco coches que se conducen distinto de verdad**: caja de marchas real (4, 5, 6 y 7
+  velocidades con su corte de encendido), par por cilindros, tracción delantera /
+  trasera / 4x4, patinaje en la salida, subviraje o sobreviraje según el reparto,
+  suspensión blanda o tabla, agarre en tierra y daño según la chapa. El menú los
+  describe con barras, números (kg, km/h, krpm) y una línea de carácter.
+- **Sonido procedural completo**: tu motor suena a TU motor (el V8 retumba grave, el
+  tricilíndrico zumba, el prototipo aúlla a 11 000 rpm), los rivales se oyen por dónde
+  vienen, hay rodadas, viento, golpes y música que acelera cuando la carrera aprieta.
 
 * **4 circuitos**: Bahía del Sol (costero, con playa y agua), Neón Ciudad (nocturno, rascacielos
   con ventanas procedurales, neones, 86 faroles con luz real), Cañón Rojo (desierto, mesetas,
@@ -57,6 +68,10 @@ En pantallas táctiles los botones aparecen solos; con mando conectado se usa al
   procedural con nubes FBM, niebla por distancia, haz de faros, tintes por instancia,
   ~70 grupos y 60–100 k triángulos por mapa (instancing masivo de decorado).
 * **Récords** locales por mapa y modo (vuelta rápida, tiempo de carrera, puntos de drift).
+* **Interfaz sin sorpresas**: el objetivo del modo y el reloj van en el panel del canvas
+  (arriba a la izquierda), el contexto —circuito, modo, vueltas/rivales, puesto y
+  diferencia— en la tira superior central; el velocímetro marca marcha, vueltas de motor
+  reales y avisa cuando patinas.
 
 ## Verificar el código
 
@@ -64,9 +79,10 @@ En pantallas táctiles los botones aparecen solos; con mando conectado se usa al
 node tools/all.js
 ```
 
-Siete suites que ejercitan shaders, geometría, mapas, físicas/IA, construcción del mundo
-y el juego entero (simulación + render con GL simulado). Detalle en `docs/ARCHITECTURE.md`.
-
+Ocho suites (≈1180 comprobaciones) que ejercitan shaders, geometría, mapas, físicas/IA,
+**identidad de los cinco coches y audio** (`tools/check-identity.js`), construcción del mundo
+y el juego entero (simulación + render con GL simulado, incluido el cableado de
+`Sound.update()` en el bucle). Detalle en `docs/ARCHITECTURE.md`.
 
 ## Progressive Web App (PWA)
 La aplicación incluye `manifest.webmanifest`, iconos instalables, `favicon.svg`, metadatos para Android/iOS/Windows y un `sw.js` que precarga el shell del juego para permitir el uso offline después de la primera visita. En GitHub Pages debe servirse por HTTPS y publicarse desde `main`.

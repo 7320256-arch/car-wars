@@ -37,6 +37,7 @@
     this.air = 0;
     this.ai = { target: 0, offset: 0, speed: 0, steer: 0, jitter: Math.random() * 10, think: 0, line: 0 };
     this.segIdx = 0; this.slipAngle = 0; this.driftHold = 0; this.driftKey = 0;
+    this.gearIdx = 0; this.gearN = 1; this.shiftT = 0; this.wheelspin = 0;
     this.limitD = 0; this.limitD_lat = 0;
     this.hitTimer = 0; this.hitDir = [0, 0];
     this.engineRPM = 900;
@@ -50,6 +51,7 @@
     this.vf = this.vr = this.yawRate = 0;
     this.steer = this.throttle = this.brake = this.handbrake = 0;
     this.speed = 0; this.slip = 0; this.slipAngle = 0; this.aLong = 0; this.aLat = 0; this.drifting = false;
+    this.gearIdx = 0; this.gearN = 1; this.shiftT = 0; this.wheelspin = 0;
     this.driftHold = 0; this.bounce = 0;
     this.air = 0; this.boost = 0; this.hitTimer = 0;
   };
@@ -65,6 +67,35 @@
    *  de índices alrededor de la última posición conocida del coche, así
    *  que la distancia lateral es siempre la de su propio carril.
    * ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------ *
+   *  Caja de cambios y curva de par: cada coche tiene marcha real,
+   *  límite de vueltas, nº de cilindros y tracción (rwd/fwd/awd).
+   *  Sin esto, las fichas de los coches eran decorativas.
+   * ------------------------------------------------------------------ */
+  const GBS = new Map();
+  function gearbox(s) {
+    let g = GBS.get(s);
+    if (g) return g;
+    const n = Math.max(3, (s.gears | 0) || 5);
+    const spread = 2.05 + n * 0.13;
+    const ratios = [];
+    for (let i = 0; i < n; i++) ratios.push(Math.pow(spread, (n - 1 - i) / (n - 1)));
+    g = { n, ratios, redline: s.redline || 7000, idle: 780, topMs: (s.top || 220) / 3.6 };
+    GBS.set(s, g);
+    return g;
+  }
+  /* forma del par: un V8 llena abajo, un 3 cilindros es pico-alto y un turbo-
+     híbrido estira hasta 11 000 rpm */
+  function torqueK(s, u) {
+    const cyl = s.cyl || 6;
+    const peak = cyl >= 8 ? 0.46 : (cyl <= 4 ? 0.54 : 0.62);
+    const wide = cyl >= 8 ? 0.80 : (cyl <= 4 ? 0.60 : 0.70);
+    const lo = cyl >= 8 ? 0.92 : (cyl <= 4 ? 0.70 : 0.80);
+    const t = lo + (1.06 - lo) * Math.max(0, 1 - Math.pow(Math.abs(u - peak) / wide, 1.7));
+    return clamp(t * (s.torqueK || 1), 0.34, 1.24);
+  }
+  G.gearbox = gearbox; G.torqueK = torqueK;
+
   const L0BUF = { i: 0, d: 0, cx: 0, cz: 0, nx: 0, nz: 0, halfW: 8 };
   const L1BUF = { i: 0, d: 0, cx: 0, cz: 0, nx: 0, nz: 0, halfW: 8 };
   const L2BUF = { i: 0, d: 0, cx: 0, cz: 0, nx: 0, nz: 0, halfW: 8 };
@@ -139,7 +170,9 @@
     const onRoad = clamp(1 - (dRoad - halfW) / 4.2, 0, 1);
     car.onRoad = onRoad;
     car.offRoadT = onRoad > 0.98 ? 0 : Math.min(2.4, car.offRoadT + dt);
-    let mu = lerp(0.98, 1.66, onRoad) * s.grip;   /* antes 0.62..1.34: agarraba poco */
+    /* el barro/arena no castiga igual a un 4x4 que a un prototipo bajo */
+    const muRoad = 1.66 * s.grip, muOff = 0.98 * s.grip * ((s.offRoad || 0.75) / 0.75);
+    let mu = lerp(muOff, muRoad, onRoad);
     if (opts.ice) mu *= 0.45;
     const downf = 1 + s.downforce * clamp(absV / 62, 0, 1.5) * 0.5;
     const latMax = mu * G98 * downf;              /* m/s² máximo de neumático */
@@ -156,25 +189,53 @@
     car.driftHold = breaking ? 1 : Math.max(0, (car.driftHold || 0) - dt * 2.6);
     const holdK = clamp(breaking ? 1 : (car.driftHold > 0 && slipAng > 0.22 ? 0.72 : 0), 0, 1);
     /* --- dirección --- */
+    const thr = car.throttle, brk = car.brake;
     const speedK = clamp(absV / top, 0, 1);
-    const steerMax = lerp(0.62, 0.20, Math.pow(speedK, 0.8));
-    let targetYawRate = (vf / Math.max(2.4, wb)) * Math.tan(car.steer * steerMax);
+    const agi = s.agility || 1;
+    const steerMax = lerp(0.62, 0.20, Math.pow(speedK, 0.8)) * agi;
+    let targetYawRate = (vf / Math.max(2.4, wb)) * Math.tan(clamp(car.steer, -1, 1) * steerMax);
     /* Límite físico de giro (círculo de fricción): yawRate máx = a_lat / v.
-       Con agarre normal el coche NUNCA se pasa de ahí -> subviraje limpio,
-       no derrape. Sólo con la tecla de derrape se permite sobre-rotar. */
-    const yawCap = (latMax * (breaking ? 1.62 : 1.02)) / Math.max(6, Math.abs(vf));
-    targetYawRate = clamp(targetYawRate, -yawCap, yawCap);
+       Con agarre normal el coche NUNCA se pasa de ahí -> subviraje limpio. */
+    const bal = s.balance || 0;
+    let capK = breaking ? (1.26 + 0.36 * (s.drift || 1)) : 1.02;
+    /* el reparto de par cambia cómo gira el coche:
+       trasera acelera y suelta el culo, delantera acelera y se abre, 4xd plano */
+    if (thr > 0.1) capK *= 1 + bal * 0.34 * thr;
+    if (brk > 0.15) capK *= (s.drive === 'fwd' ? 1.12 : 0.95);
+    const yawCap = (latMax * capK) / Math.max(6, Math.abs(vf));
+    /* con el pie a fondo el morro/cola pesan según el reparto: un V8 trasero
+       gira DE MÁS (el par vence al neumático trasero), un delantera se abre */
+    const powAuth = 1 + bal * Math.max(thr, 0) * 0.62 + (s.drive === 'fwd' ? 0.10 * Math.max(thr, 0) : 0);
+    targetYawRate = clamp(targetYawRate * powAuth, -yawCap, yawCap);
     /* respuesta de dirección algo más lenta: el coche no se "carga" de ángulo
        en 2 fotogramas (antes de esto, un volantazo ya era derrape) */
-    const resp = clamp(5.2 - speedK * 1.4, 3.0, 5.8);
+    const resp = clamp(5.2 - speedK * 1.4, 3.0, 5.8) * (0.80 + 0.22 * agi);
     car.yawRate = G.damp(car.yawRate, targetYawRate, resp, dt);
+    /* --- caja de cambios, par motor y vueltas --- */
+    const gb = gearbox(s);
+    let gi = clamp(car.gearIdx | 0, 0, gb.n - 1);
+    let gearTop = gb.topMs / gb.ratios[gi];
+    let rpm = clamp(Math.abs(vf) / Math.max(2, gearTop) * gb.redline, gb.idle, gb.redline * 1.10);
+    car.shiftT = Math.max(0, (car.shiftT || 0) - dt);
+    car.shiftFx = Math.max(0, (car.shiftFx || 0) - dt * 5);   /* la ventanilla de aviso del cambio */
+    if (car.shiftT <= 0) {
+      const u = rpm / gb.redline;
+      if (u > 0.985 && gi < gb.n - 1) { car.gearIdx = gi + 1; car.shiftT = 0.075; car.shiftFx = 1; }
+      else if (u < 0.44 && gi > 0) { car.gearIdx = gi - 1; car.shiftT = 0.062; }
+      gi = clamp(car.gearIdx | 0, 0, gb.n - 1);
+      gearTop = gb.topMs / gb.ratios[gi];
+      rpm = clamp(Math.abs(vf) / Math.max(2, gearTop) * gb.redline, gb.idle, gb.redline * 1.10);
+    }
+    car.gearN = gi + 1; car.engineRPM = rpm;
+    const tq = torqueK(s, clamp(rpm / gb.redline, 0, 1.1));
     /* --- fuerzas longitudinales --- */
     let Fi = 0;
-    const thr = car.throttle, brk = car.brake;
-    const boostK = 1 + car.boost * 0.42;
+    const boostK = 1 + car.boost * (0.30 + 0.10 * (s.boost || 1));
     if (thr > 0) {
-      const f = 1 - clamp(Math.abs(vf) / top, 0, 1) * 0.82;
-      Fi += s.power * 12400 * thr * Math.pow(clamp(f, 0, 1), 0.72) * boostK;
+      /* el corte de encendido es POR MARCHA: en 1ª se acaba el empuje pronto y
+         hay que cambiar (eso es lo que hace que 4, 5, 6 y 7 marchas se noten) */
+      const f = 1 - Math.pow(clamp(Math.abs(vf) / Math.max(2, gearTop), 0, 1), 2) * 0.45;
+      Fi += s.power * 12400 * thr * Math.pow(clamp(f, 0, 1), 0.7) * boostK * tq * (1 - clamp(car.shiftT * 6.0, 0, 0.52));
     } else if (thr < 0) {
       Fi -= s.power * 5600 * (vf > 0.6 ? 1 : clamp(1 - Math.abs(vf) / (top * 0.42), 0, 1.5)) * Math.abs(thr);
     }
@@ -185,8 +246,9 @@
     } else if (Math.abs(thr) < 0.02) {
       Fi -= Math.sign(vf) * (170 + 0.9 * mass * 0.06) * Math.min(Math.abs(vf), 3);
     }
-    /* freno de mano: frena el eje trasero y suelta agarre lateral */
-    if (car.handbrake > 0.3) Fi -= Math.sign(vf) * 3400 * car.handbrake;
+    /* freno de mano: frena el eje trasero SÓLO si no estás acelerando (si no,
+       en un arcade el truco es mano + gas para sostener el derrape) */
+    if (car.handbrake > 0.3 && thr < 0.35) Fi -= Math.sign(vf) * 3400 * car.handbrake;
     /* arrastre */
     const cdA = def.style === 'proto' ? 0.42 : (def.style === 'suv' ? 1.05 : 0.62);
     Fi -= 0.5 * 1.2 * cdA * 2.1 * vf * Math.abs(vf) * 0.42;
@@ -196,7 +258,12 @@
     /* --- fuerzas laterales (los neumáticos intentan anular vr) --- */
     /* fricción lateral de las ruedas traseras: muy alta en conducciín normal
        (anula el deslizamiento en ~0.05 s) y se suelta sólo con la tecla */
-    const gripLat = lerp(27, 18, speedK) * (1 - 0.82 * Math.max(driftIn, holdK));
+    const release = clamp(0.58 + 0.24 * (s.drift || 1), 0.48, 0.92);
+    /* y el eje trasero aguanta menos cuanto más par le metes (si es motriz):
+       por eso el Hammer se cruza solo al acelerar y el Grizzly no */
+    const rearGrip = clamp(1 - Math.max(bal, 0) * Math.max(thr, 0) * 0.40 * (s.drive === 'fwd' ? 0.35 : 1)
+      + (s.drive === 'awd' ? 0.10 * Math.max(thr, 0) : 0), 0.55, 1.18);
+    const gripLat = lerp(27, 18, speedK) * (1 - release * Math.max(driftIn, holdK)) * rearGrip;
     let latAcc = -vr * gripLat * (mu / 1.25);
     /* tope de fuerza lateral: muy alto en conducciín normal (la rueda trasera
        AGUANTA el régimen y no desliza) y más bajo al derrapar */
@@ -205,6 +272,30 @@
     /* con el derrape mantenido y gas, el trompo no frena el coche: las ruedas
        deslizando "empujan" hacia delante (arcade, evita derrapes a 30 km/h) */
     if (breaking && vf > 5 && thr > 0.15) Fi += Math.min(s.power * 9600, Math.abs(latAcc) * mass * 0.40);
+    /* --- tracción disponible: el círculo de fricción y el eje motriz --- *
+     * si el motor pide más fuerza de la que el neumático puede meter en el
+     * suelo, patina: se pierde empuje, sale humo y el coche cambia de
+     * carácter (el V8 trasero no es lo mismo que el 4x4 de 2150 kg). */
+    {
+      const loadLat = clamp(Math.abs(latAcc) / (latMax * 1.02), 0, 1);
+      let share = s.drive === 'awd' ? 0.92 : (s.drive === 'fwd' ? 0.56 - 0.08 * Math.max(thr, 0) : 0.46 + 0.12 * Math.max(thr, 0));
+      /* en un derrape sostenido el par es lo que mantiene el ángulo: ahí el eje
+         motriz manda aunque el neumático esté cruzado (si no, nadie derrapa) */
+      if (breaking) share = Math.max(share, 0.72 + 0.06 * (s.drift || 1));
+      share *= 1 + s.downforce * clamp(Math.abs(vf) / 62, 0, 1.5) * 0.20;
+      /* el patinaje come agarre, pero en un arcade el freno de mano suelta el
+         eje trasero sin matar el empuje (mano + gas = derrape sostenido) */
+      const maxDrive = Math.max(900, mu * G98 * mass * share * (1 - 0.40 * loadLat * (breaking ? 0.45 : 1)));
+      if (Fi > maxDrive) {
+        const over = (Fi - maxDrive) / maxDrive;
+        Fi = maxDrive * (1 - clamp(over * 0.26, 0, 0.34));
+        /* por encima de un 6 % de exceso empieza a cantear; hace falta un buen
+           excedente (salida en 1ª con un V8) para que patine DE VERDAD */
+        car.wheelspin = G.damp(car.wheelspin || 0, clamp((over - 0.03) * 2.2, 0, 1), 15, dt);
+      } else {
+        car.wheelspin = G.damp(car.wheelspin || 0, 0, 7, dt);
+      }
+    }
     /* --- integración en marco rotatorio --- */
     const acc = Fi / mass;
     let nvf = vf + (acc + vr * car.yawRate) * dt;
@@ -270,10 +361,11 @@
     const fwdSlope = (world.height.at(car.pos[0] + fwd[0] * 2.2, car.pos[2] + fwd[2] * 2.2) - world.height.at(car.pos[0] - fwd[0] * 2.2, car.pos[2] - fwd[2] * 2.2)) / 4.4;
     const rightSlope = (world.height.at(car.pos[0] + right[0] * 1.7, car.pos[2] + right[2] * 1.7) - world.height.at(car.pos[0] - right[0] * 1.7, car.pos[2] - right[2] * 1.7)) / 3.4;
     const accLat = -latAcc;
-    const transfer = clamp(-accLat * 0.011, -0.10, 0.10);
+    const rideK = clamp(s.ride || 1, 0.25, 1.3);
+    const transfer = clamp(-accLat * 0.011 * (0.45 + 0.75 * rideK), -0.14, 0.14);
     const transferL = clamp(-acc * 0.006, -0.07, 0.07);
-    car.pitch = G.damp(car.pitch, Math.atan(fwdSlope) * 0.85 + transferL, 9, dt);
-    car.roll = G.damp(car.roll, Math.atan(rightSlope) * 0.85 + transfer, 9, dt);
+    car.pitch = G.damp(car.pitch, Math.atan(fwdSlope) * 0.85 + transferL * (0.5 + 0.7 * rideK), 9, dt);
+    car.roll = G.damp(car.roll, Math.atan(rightSlope) * 0.85 + transfer * rideK, 11 - 3 * rideK, dt);
     car.bounce = G.damp(car.bounce, 0, 8, dt);
     /* --- límites de pista (quitamiedos / muros), con CCD --- *
      * 1) se mide la lateral LOCAL (ventana de índices) en el punto de
@@ -313,7 +405,7 @@
         car.yawRate *= 0.42;
         car.hitDir[0] = -nx; car.hitDir[1] = -nz;
         if (vOut > 2.5) {
-          car.damage = clamp(car.damage + vOut * 0.017, 0, 1);
+          car.damage = clamp(car.damage + vOut * 0.017 * (def.stats.fragility || 1), 0, 1);
           car.hitTimer = 0.35;
           if (world.onHit) world.onHit(car, vOut, car.pos[0], car.pos[1], car.pos[2]);
         }
@@ -352,7 +444,7 @@
           car.yawRate *= 0.36;
           car.hitDir[0] = -nx; car.hitDir[1] = -nz;
           if (-vOut > 2.2) {
-            car.damage = clamp(car.damage + (-vOut) * 0.020, 0, 1);
+            car.damage = clamp(car.damage + (-vOut) * 0.020 * (def.stats.fragility || 1), 0, 1);
             car.hitTimer = 0.34;
             if (world.onHit) world.onHit(car, -vOut, car.pos[0], car.pos[1], car.pos[2]);
           }
@@ -371,7 +463,8 @@
     /* --- ruedas / rpm --- */
     car.wheelSpin += (nvf / Math.max(0.2, def.wheelR)) * dt;
     car.steerVis = G.damp(car.steerVis, car.steer * steerMax, 13, dt);
-    car.engineRPM = lerp(850, 6400 + (car.boost ? 1100 : 0), clamp(Math.abs(nvf) / (top * 0.72) + Math.abs(thr) * 0.12, 0, 1.08));
+    /* (rpm ya viene de la caja de cambios arriba; aquí sólo el ralentí) */
+    if (car.throttle === 0 && car.speed < 1) car.engineRPM = gb.idle + Math.sin((car.speed + rpm) * 0.012) * 40;
     if (car.throttle === 0 && car.speed < 1) car.engineRPM = 820 + Math.sin(performance.now() * 0.012) * 40;
     /* combustible de nitro */
     if (car.boost > 0.05) car.boostFuel = Math.max(0, car.boostFuel - dt * 26);
@@ -494,15 +587,21 @@
         }
       }
     }
-    car.steer = clamp(err * 2.35 - car.yawRate * 0.30, -1, 1);
     /* velocidad objetivo: límite por radio + pendiente */
     const rmin = Math.max(14, Math.min(r, 260));
-    const mu = 1.16 * car.stats.grip * (car.onRoad > 0.5 ? 1 : 0.66);
+    const cst = car.stats;
+    /* cada IA conduce CON su coche: el 4x4 no le teme a la tierra, el nervioso
+       de tracción trasera levanta el pie a media curva, el ágil traza más tarde */
+    const mu = 1.16 * cst.grip * (car.onRoad > 0.5 ? 1 : 0.45 + 0.30 * clamp(cst.offRoad || 0.75, 0.5, 1.05));
     let vMax = Math.sqrt(Math.max(6, rmin * G98 * mu * (targetSpeedK || 0.94)));
-    vMax = Math.min(vMax, car.stats.top / 3.6 * (targetSpeedK || 0.94));
+    vMax = Math.min(vMax, cst.top / 3.6 * (targetSpeedK || 0.94));
     if (Math.abs(err) > 1.0) vMax *= 0.5;
-    if (car.speed > vMax * 1.06) { car.throttle = 0; car.brake = clamp((car.speed - vMax) * 0.22, 0, 1); car.handbrake = car.speed > vMax * 1.5 && Math.abs(err) > 0.8 ? 0.8 : 0; }
+    if (car.speed > vMax * 1.06) { car.throttle = 0; car.brake = clamp((car.speed - vMax) * (0.22 / clamp(cst.brake || 1, 0.75, 1.15)), 0, 1); car.handbrake = car.speed > vMax * 1.5 && Math.abs(err) > 0.8 && (cst.drift || 1) > 1.05 ? 0.8 : 0; }
     else { car.throttle = clamp((vMax - car.speed) * 0.5 + 0.35, 0, 1); car.brake = 0; car.handbrake = 0; }
+    /* el que se suelta detrás (balance > 0.2) cuida el gas en apoyo: si no,
+       los rivales irían de lado por todas partes y no se entendería nada */
+    if ((cst.balance || 0) > 0.2 && Math.abs(err) > 0.30 && car.speed > vMax * 0.92) car.throttle = Math.min(car.throttle, 0.58);
+    car.steer = clamp(err * 2.35 * (0.88 + 0.14 * clamp(cst.agility || 1, 0.7, 1.3)) - car.yawRate * 0.30, -1, 1);
     /* salida de derrape */
     if (Math.abs(car.vr) > 7.5) { car.throttle *= 0.45; car.brake = Math.max(car.brake, 0.15); }
     car.boost = (vMax > car.speed * 1.4 && car.boostFuel > 40 && (targetSpeedK || 1) > 0.95) ? 0.8 : 0;
@@ -583,11 +682,12 @@
   FX.prototype.clear = function () { for (const p of this.list) p.active = false; };
 
   /* ---------- emisores ---------- */
-  function tireSmoke(fx, car, world, intensity) {
+  function tireSmoke(fx, car, world, intensity, axle) {
     const c = Math.cos(car.yaw), s = Math.sin(car.yaw);
     const def = car.def;
+    const lz = axle === 'f' ? def.wb / 2 : -def.wb / 2;   /* humo en el eje que patina */
     for (const side of [-1, 1]) {
-      const lx = side * def.track / 2, lz = -def.wb / 2;
+      const lx = side * def.track / 2;
       const wx = car.pos[0] + lx * c + lz * s, wz = car.pos[2] - lx * s + lz * c;
       const gy = world.height.at(wx, wz) + 0.1;
       const n = intensity > 0.6 ? 2 : 1;

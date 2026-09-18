@@ -230,8 +230,24 @@
     x.fillText(Math.round(kmh), 0, R * 0.34);
     x.fillStyle = 'rgba(190,210,240,0.7)'; x.font = '600 11px system-ui,sans-serif';
     x.fillText('KM/H', 0, R * 0.52);
-    x.fillStyle = 'rgba(190,210,240,0.85)'; x.font = '600 12px ui-monospace,monospace';
-    x.fillText('M' + Math.max(1, Math.round(1 + clamp(Math.log(Math.max(1, kmh)) / Math.log(70), 0, 1) * 5)), 0, -R * 0.42);
+    x.fillStyle = 'rgba(190,210,240,0.85)'; x.font = '700 13px ui-monospace,monospace';
+    x.fillText('M' + (p.gearN || 1) + '/' + (p.stats.gears || 5), 0, -R * 0.42);
+    /* arco de vueltas con el corte de encendido de cada motor (no el mismo
+       para todos: 5 000 rpm el 4x4, 11 000 el prototipo) */
+    {
+      const rl = p.stats.redline || 7000, ur = clamp((p.engineRPM || 800) / rl, 0, 1.05);
+      x.beginPath(); x.arc(0, 0, R + 15, a0, lerp(a0, a1, clamp(ur, 0, 1)));
+      x.strokeStyle = ur > 0.985 ? '#ff5a4a' : (ur > 0.86 ? '#ffb14a' : '#8fd0ff');
+      x.lineWidth = 3.6; x.stroke();
+      x.fillStyle = 'rgba(190,210,240,0.55)'; x.font = '600 10px ui-monospace,monospace';
+      x.fillText(Math.round(p.engineRPM || 800) + ' rpm', 0, -R * 0.22);
+      /* cuando patina (salida, derrape) se ve: el coche no es sólo una barra */
+      if ((p.wheelspin || 0) > 0.12) {
+        x.fillStyle = 'rgba(255,150,70,' + (0.35 + 0.5 * p.wheelspin).toFixed(2) + ')';
+        x.font = '800 10px ui-monospace,monospace';
+        x.fillText('PATINA', 0, R * 0.72);
+      }
+    }
     /* nitro */
     const bf = p.boostFuel / 100;
     x.beginPath(); x.arc(0, 0, R + 3, a1 - 0.1, lerp(a1, a1 - 0.62, 1 - bf) , true);
@@ -245,7 +261,9 @@
     const hudLines = game.hudLines ? game.hudLines() : [];
     x.save();
     x.font = '700 13px system-ui,sans-serif';
-    let yy = 20;
+    /* empieza por debajo de la tira de contexto del DOM (arriba al centro): así
+       la esquina superior izquierda la controla sólo este panel y nada se pisa */
+    let yy = 72;
     for (const l of hudLines) {
       const big = l.big;
       x.textAlign = 'left';
@@ -259,6 +277,24 @@
       x.fillText(l.v, 22 + x.measureText(l.k).width * (big ? 1.16 : 1) + 8, yy + (big ? 5 : 3));
       x.font = '700 13px system-ui,sans-serif';
       yy += big ? 36 : 30;
+    }
+    /* para qué sirve este modo, siempre visible (no sólo en el menú) */
+    const md = game.modeDef;
+    if (md && md.win) {
+      const maxW = Math.min(246, w * 0.28);
+      x.font = '600 11.5px system-ui,sans-serif';
+      const words = ('objetivo: ' + md.win).split(' ');
+      let l1 = '', l2 = '';
+      for (let k = 0; k < words.length; k++) {
+        const word = words[k];
+        if (!l2 && x.measureText((l1 ? l1 + ' ' : '') + word).width <= maxW) l1 = (l1 ? l1 + ' ' : '') + word;
+        else l2 = l2 ? l2 + ' ' + word : word;
+      }
+      x.fillStyle = 'rgba(6,8,14,0.40)';
+      roundRect(x, 14, yy - 10, maxW + 16, l2 ? 36 : 21, 6); x.fill();
+      x.fillStyle = 'rgba(178,204,240,0.74)';
+      x.fillText(l1, 22, yy + 4);
+      if (l2) x.fillText(l2, 22, yy + 18);
     }
     x.restore();
 
@@ -366,6 +402,7 @@
       '    <label class="chk"><input type="checkbox" data-o="shadows" checked><span>Sombras</span></label>' +
       '    <label class="chk"><input type="checkbox" data-o="particles" checked><span>Humo y chispas</span></label>' +
       '    <label class="chk"><input type="checkbox" data-o="sound" checked><span>Sonido</span></label>' +
+      '    <label class="chk"><input type="checkbox" data-o="music" checked><span>Música de fondo</span></label>' +
       '    <label class="sel"><span>Calidad</span><select data-o="quality"><option value="low">baja</option><option value="med" selected>media</option><option value="high">alta</option></select></label>' +
       '    <label class="sel"><span>Vueltas</span><select data-o="laps"><option>2</option><option selected>3</option><option>5</option><option>8</option></select></label>' +
       '    <label class="sel"><span>Derrape</span><select data-o="drift"><option value="manual" selected>manual (SHIFT)</option><option value="auto">automático</option></select></label>' +
@@ -416,7 +453,9 @@
       box.innerHTML = list.map((m, i) => '<div class="card' + (i === 0 ? ' sel' : '') + '" data-k="' + m.id + '">' + html(m, i) + '</div>').join('');
     };
     mk(maps, 'maps', 'map', m => '<b>' + m.name + '</b><small>' + m.blurb + '</small><em class="mw">' + m.time + '</em>');
-    mk(modes, 'modes', 'mode', m => '<b>' + m.name + '</b><small>' + m.blurb + '</small>');
+    mk(modes, 'modes', 'mode', m => '<b>' + m.name + '</b><small>' + m.blurb + '</small>' +
+      (m.info ? '<span class="fine">' + m.info + '</span>' : '') +
+      (m.win ? '<span class="win">→ ' + m.win + '</span>' : ''));
     mk(cars, 'cars', 'car', c => '<b>' + c.name + '</b><small>' + c.blurb + '</small>');
     this.maps = maps; this.modes = modes; this.cars = cars;
     this.showStats(cars[0]);
@@ -433,10 +472,34 @@
   };
   Screens.prototype.showStats = function (c) {
     const s = this.root.querySelector('.stats');
-    const bar = (k, v) => '<div class="st"><span>' + k + '</span><i><b style="width:' + Math.round(clamp(v, 0, 1) * 100) + '%"></b></i></div>';
-    s.innerHTML = bar('potencia', c.stats.power / 1.1) + bar('agarre', c.stats.grip / 1.15) +
-      bar('frenada', c.stats.brake / 1.15) + bar('velocidad', c.stats.top / 300) +
-      bar('derrape', c.stats.drift / 1.1) + '<div class="st"><span>peso</span><i class="w">' + c.stats.mass + ' kg</i></div>';
+    const st = c.stats;
+    const bar = (k, v, txt) => '<div class="st"><span>' + k + '</span><i><b style="width:' +
+      Math.round(clamp(v, 0, 1) * 100) + '%"></b></i>' + (txt ? '<u>' + txt + '</u>' : '') + '</div>';
+    const ch = {
+      coupe: 'neutro y predecible: es el listón con el que se comparan los demás',
+      muscle: 'V8 de par: te arranca de las manos en recta y patina en 1ª; suelto de culo al entrar y frena tarde',
+      hatch: 'delantera nerviosa en curva lenta, subvirador en rápida y sin aire por encima de 200',
+      suv: '4x4 alto y blando: sale como un tiro en tierra, baila en asfalto y no frena',
+      proto: '7 marchas a 11 000 rpm con carga aerodinámica: letal y frágil, castiga cualquier toque'
+    }[c.id] || 'un poco de todo y perfecto en nada';
+    const drive = { rwd: 'trasera', fwd: 'delantera', awd: '4x4' }[st.drive] || '—';
+    const ride = clamp(st.ride || 1, 0, 1.3);
+    s.innerHTML =
+      '<div class="shead">' + c.name +
+      '<em>' + st.mass + ' kg · tracción ' + drive + ' · ' + (st.gears || 5) +
+      ' marchas · corte ' + (Math.round((st.redline || 7000) / 100) / 10) + ' krpm · ' +
+      (st.cyl || 6) + ' cilindros</em></div>' +
+      bar('empuje', (st.power * (st.torqueK || 1)) / 1.6, 'par ' + Math.round((st.torqueK || 1) * 100) + '%') +
+      bar('puntería', st.top / 300, st.top + ' km/h') +
+      bar('agarre', st.grip / 1.2, Math.round(st.grip * 100) + '%') +
+      bar('frenada', st.brake / 1.15, Math.round(st.brake * 100) + '%') +
+      bar('agilidad', (st.agility || 1) / 1.3, (st.agility || 1) < 0.9 ? 'perezoso' : ((st.agility || 1) > 1.1 ? 'cuchillo' : 'normal')) +
+      bar('equilibrio', 0.5 + (st.balance || 0) * 0.5, (st.balance || 0) > 0.2 ? 'se suelta detrás' : ((st.balance || 0) < -0.1 ? 'se abre delante' : 'neutro')) +
+      bar('tierra', (st.offRoad || 0.75) / 1.05, (st.offRoad || 0.75) > 0.9 ? 'agarra en barro' : 'patina en barro') +
+      bar('confort', 1.25 - ride, ride > 1 ? 'blanda, se menea' : (ride < 0.5 ? 'dura, sin mullido' : 'deportiva')) +
+      bar('derrape', (st.drift || 1) / 1.4, 'facilidad para cruzarse') +
+      bar('chapa', 1.4 - (st.fragility || 1), (st.fragility || 1) > 1.2 ? 'se daña de más' : 'aguanta el golpe') +
+      '<div class="sfoot">' + ch + '</div>';
   };
   Screens.prototype.sync = function () {
     const get = cls => { const c = this.root.querySelector('.' + cls + ' .card.sel'); return c ? c.getAttribute('data-k') : null; };

@@ -49,13 +49,18 @@ body.nogl #hud,body.nogl .mini{display:none}/*---------- carga ----------*/#boot
 #boot .errdet{font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;color:#ffb4b4;
   max-width:min(680px,88vw);margin:0 auto;text-align:left;background:rgba(255,60,60,.08);
   border:1px solid rgba(255,90,90,.3);padding:10px 12px;border-radius:10px;white-space:pre-wrap}/*---------- HUD flotante ----------*/.mini{position:absolute;right:18px;top:16px;width:168px;height:168px;border-radius:14px;
-  background:var(--glass);border:1px solid var(--line);box-shadow:var(--sh);z-index:12;pointer-events:none}
-.fps{position:absolute;left:16px;top:16px;z-index:12;pointer-events:none;
+  background:var(--glass);border:1px solid var(--line);box-shadow:var(--sh);z-index:12;pointer-events:none}.fps{position:absolute;left:50%;transform:translateX(-50%);top:10px;z-index:12;pointer-events:none;
   font:600 11px ui-monospace,monospace;color:var(--ink2);background:var(--glass);
-  border:1px solid var(--line);padding:4px 8px;border-radius:8px}
-.topleft{position:absolute;left:16px;top:46px;z-index:12;pointer-events:none;display:grid;gap:6px}
-.badge{display:inline-flex;gap:8px;align-items:center;background:var(--glass);border:1px solid var(--line);
-  border-radius:10px;padding:6px 10px;font-size:12px;color:var(--ink2)}
+  border:1px solid var(--line);padding:3px 8px;border-radius:8px}
+.topleft{position:absolute;left:50%;transform:translateX(-50%);top:30px;z-index:12;pointer-events:none;
+  display:flex;flex-wrap:wrap;gap:6px;justify-content:center;
+  max-width:min(660px,max(230px,calc(100vw - 560px)))}
+.badge{display:inline-flex;gap:6px;align-items:center;background:var(--glass);border:1px solid var(--line);
+  border-radius:10px;padding:4px 9px;font-size:11px;color:var(--ink2);white-space:nowrap}
+.badge.tiny{font:600 10.5px/1.35 ui-monospace,monospace;color:rgba(198,218,248,.78)}@media (max-width:860px){.fps{display:none}
+  .topleft{top:8px;gap:4px;max-width:min(520px,74vw)}
+  .topleft .badge:nth-child(n+3){display:none}
+}
 .badge b{color:var(--ink);font:700 13px ui-monospace,monospace}
 .gearhint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:11;
   display:flex;gap:10px;align-items:center;color:var(--ink2);font-size:11.5px;
@@ -84,6 +89,9 @@ body:not(.playing) .gearhint,body:not(.playing) .mini,body:not(.playing) .fps,bo
   transition:transform .12s,border-color .16s,background .16s}
 .card b{display:block;font-weight:800;font-size:15px;letter-spacing:-.01em}
 .card small{display:block;color:var(--ink2);font-size:11.5px;margin-top:3px;line-height:1.35}
+.card .fine{display:block;margin-top:4px;font-size:10.5px;line-height:1.3;color:rgba(198,218,248,.6)}
+.card .win{display:block;margin-top:5px;padding-top:5px;border-top:1px dashed var(--line);
+  font-size:10.5px;line-height:1.3;color:#8fd0ff}
 .card em{position:absolute;right:11px;top:11px;font-style:normal;font:700 10px ui-monospace,monospace;
   color:var(--ink2);background:rgba(255,255,255,.07);border-radius:6px;padding:2px 6px}
 .card:hover{transform:translateY(-1px);border-color:rgba(120,190,255,.42)}
@@ -92,7 +100,11 @@ body:not(.playing) .gearhint,body:not(.playing) .mini,body:not(.playing) .fps,bo
 .card.sel::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;border-radius:2px;
   background:linear-gradient(90deg,var(--acc),var(--acc2))}
 .stats{margin-top:11px;display:grid;gap:5px}
-.st{display:grid;grid-template-columns:74px 1fr;gap:9px;align-items:center;font-size:11px;color:var(--ink2)}
+.shead{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;font-weight:800;font-size:13px;color:var(--ink)}
+.shead em{font:600 10px ui-monospace,monospace;font-style:normal;color:rgba(190,215,250,.62)}
+.sfoot{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);font-size:11px;line-height:1.4;color:rgba(214,230,255,.82)}
+.st{display:grid;grid-template-columns:74px 1fr auto;gap:9px;align-items:center;font-size:11px;color:var(--ink2)}
+.st u{text-decoration:none;font:600 9.5px ui-monospace,monospace;color:rgba(190,215,250,.62);white-space:nowrap}
 .st i{display:block;height:6px;border-radius:99px;background:rgba(255,255,255,.09);overflow:hidden}
 .st i b{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--acc),var(--acc2))}
 .st i.w{background:none;height:auto;text-align:right;color:var(--ink);font:700 11px ui-monospace,monospace}
@@ -2408,8 +2420,10 @@ void main(){
       cabin: { front: 0.30, back: -0.62, h1: 0.50, h2: 0.90, hw: 0.80 },
       style: 'coupe',
       color: '#d8203a', color2: '#16181d',
-      stats: { power: 1.00, grip: 1.03, brake: 1.00, mass: 1280, top: 236, downforce: 0.9, drift: 1.0, gear: 5.2 }
-    },
+      stats: { power: 1.00, grip: 1.03, brake: 1.00, mass: 1280, top: 236, downforce: 0.9, drift: 1.00, gear: 5.2,
+        gears: 6, redline: 7200, cyl: 6, drive: 'rwd', balance: 0.05, agility: 1.00, ride: 0.55, boost: 1.00,
+        offRoad: 0.75, fragility: 1.00, torqueK: 1.00 },
+          },
     {
       id: 'muscle', name: 'Hammer V8', cls: 'Muscle',
       desc: 'Bestial en recta, sobreviraje brutal. Derrapa de maravilla.',
@@ -2417,8 +2431,10 @@ void main(){
       cabin: { front: 0.14, back: -0.78, h1: 0.55, h2: 0.96, hw: 0.84 },
       style: 'muscle',
       color: '#f2a10c', color2: '#101114',
-      stats: { power: 1.20, grip: 0.90, brake: 0.94, mass: 1660, top: 250, downforce: 0.5, drift: 1.35, gear: 4.6 }
-    },
+      stats: { power: 1.22, grip: 0.90, brake: 0.94, mass: 1660, top: 252, downforce: 0.5, drift: 1.35, gear: 4.6,
+        gears: 4, redline: 6400, cyl: 8, drive: 'rwd', balance: 0.42, agility: 0.84, ride: 0.86, boost: 1.16,
+        offRoad: 0.62, fragility: 1.10, torqueK: 1.14 },
+          },
     {
       id: 'hatch', name: 'Pixel Turbo', cls: 'Hot Hatch',
       desc: 'Pequeño, ágil y pegajoso. Rey de los tramos lentos.',
@@ -2426,8 +2442,10 @@ void main(){
       cabin: { front: 0.34, back: -0.90, h1: 0.55, h2: 1.10, hw: 0.83 },
       style: 'hatch',
       color: '#1e9bff', color2: '#141619',
-      stats: { power: 0.88, grip: 1.12, brake: 1.05, mass: 1090, top: 208, downforce: 0.6, drift: 1.15, gear: 5.8 }
-    },
+      stats: { power: 0.88, grip: 1.12, brake: 1.05, mass: 1090, top: 208, downforce: 0.6, drift: 1.15, gear: 5.8,
+        gears: 5, redline: 8200, cyl: 3, drive: 'fwd', balance: -0.34, agility: 1.22, ride: 0.62, boost: 1.08,
+        offRoad: 0.70, fragility: 0.92, torqueK: 0.96 },
+          },
     {
       id: 'suv', name: 'Grizzly 4x4', cls: 'SUV',
       desc: 'Pesado pero imparable: perdona errores y golpea fuerte.',
@@ -2435,8 +2453,10 @@ void main(){
       cabin: { front: 0.20, back: -0.92, h1: 0.66, h2: 1.28, hw: 0.90 },
       style: 'suv',
       color: '#2f7d4f', color2: '#101215',
-      stats: { power: 1.02, grip: 0.86, brake: 0.90, mass: 2150, top: 212, downforce: 0.35, drift: 0.8, gear: 4.2 }
-    },
+      stats: { power: 1.02, grip: 0.86, brake: 0.90, mass: 2150, top: 214, downforce: 0.35, drift: 0.80, gear: 4.2,
+        gears: 6, redline: 5000, cyl: 4, drive: 'awd', balance: 0.02, agility: 0.76, ride: 1.18, boost: 1.22,
+        offRoad: 1.00, fragility: 0.80, torqueK: 1.22 },
+          },
     {
       id: 'proto', name: 'NF-01 Evo', cls: 'Prototipo',
       desc: 'Aerodinámica extrema y potencia bruta. Sólo para expertos.',
@@ -2444,8 +2464,10 @@ void main(){
       cabin: { front: 0.10, back: -0.70, h1: 0.44, h2: 0.80, hw: 0.62 },
       style: 'proto',
       color: '#e6e9ee', color2: '#1a1d24',
-      stats: { power: 1.34, grip: 1.17, brake: 1.10, mass: 1010, top: 292, downforce: 1.6, drift: 0.95, gear: 6.0 }
-    }
+      stats: { power: 1.34, grip: 1.17, brake: 1.10, mass: 1010, top: 294, downforce: 1.60, drift: 0.95, gear: 6.0,
+        gears: 7, redline: 11000, cyl: 6, drive: 'awd', balance: -0.08, agility: 1.08, ride: 0.30, boost: 1.34,
+        offRoad: 0.68, fragility: 1.35, torqueK: 0.92 },
+          }
   ];
   G.CARS = CARS;
 
@@ -4394,6 +4416,7 @@ void main(){
     this.air = 0;
     this.ai = { target: 0, offset: 0, speed: 0, steer: 0, jitter: Math.random() * 10, think: 0, line: 0 };
     this.segIdx = 0; this.slipAngle = 0; this.driftHold = 0; this.driftKey = 0;
+    this.gearIdx = 0; this.gearN = 1; this.shiftT = 0; this.wheelspin = 0;
     this.limitD = 0; this.limitD_lat = 0;
     this.hitTimer = 0; this.hitDir = [0, 0];
     this.engineRPM = 900;
@@ -4407,6 +4430,7 @@ void main(){
     this.vf = this.vr = this.yawRate = 0;
     this.steer = this.throttle = this.brake = this.handbrake = 0;
     this.speed = 0; this.slip = 0; this.slipAngle = 0; this.aLong = 0; this.aLat = 0; this.drifting = false;
+    this.gearIdx = 0; this.gearN = 1; this.shiftT = 0; this.wheelspin = 0;
     this.driftHold = 0; this.bounce = 0;
     this.air = 0; this.boost = 0; this.hitTimer = 0;
   };
@@ -4422,6 +4446,35 @@ void main(){
    *  de índices alrededor de la última posición conocida del coche, así
    *  que la distancia lateral es siempre la de su propio carril.
    * ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------ *
+   *  Caja de cambios y curva de par: cada coche tiene marcha real,
+   *  límite de vueltas, nº de cilindros y tracción (rwd/fwd/awd).
+   *  Sin esto, las fichas de los coches eran decorativas.
+   * ------------------------------------------------------------------ */
+  const GBS = new Map();
+  function gearbox(s) {
+    let g = GBS.get(s);
+    if (g) return g;
+    const n = Math.max(3, (s.gears | 0) || 5);
+    const spread = 2.05 + n * 0.13;
+    const ratios = [];
+    for (let i = 0; i < n; i++) ratios.push(Math.pow(spread, (n - 1 - i) / (n - 1)));
+    g = { n, ratios, redline: s.redline || 7000, idle: 780, topMs: (s.top || 220) / 3.6 };
+    GBS.set(s, g);
+    return g;
+  }
+  /* forma del par: un V8 llena abajo, un 3 cilindros es pico-alto y un turbo-
+     híbrido estira hasta 11 000 rpm */
+  function torqueK(s, u) {
+    const cyl = s.cyl || 6;
+    const peak = cyl >= 8 ? 0.46 : (cyl <= 4 ? 0.54 : 0.62);
+    const wide = cyl >= 8 ? 0.80 : (cyl <= 4 ? 0.60 : 0.70);
+    const lo = cyl >= 8 ? 0.92 : (cyl <= 4 ? 0.70 : 0.80);
+    const t = lo + (1.06 - lo) * Math.max(0, 1 - Math.pow(Math.abs(u - peak) / wide, 1.7));
+    return clamp(t * (s.torqueK || 1), 0.34, 1.24);
+  }
+  G.gearbox = gearbox; G.torqueK = torqueK;
+
   const L0BUF = { i: 0, d: 0, cx: 0, cz: 0, nx: 0, nz: 0, halfW: 8 };
   const L1BUF = { i: 0, d: 0, cx: 0, cz: 0, nx: 0, nz: 0, halfW: 8 };
   const L2BUF = { i: 0, d: 0, cx: 0, cz: 0, nx: 0, nz: 0, halfW: 8 };
@@ -4496,7 +4549,9 @@ void main(){
     const onRoad = clamp(1 - (dRoad - halfW) / 4.2, 0, 1);
     car.onRoad = onRoad;
     car.offRoadT = onRoad > 0.98 ? 0 : Math.min(2.4, car.offRoadT + dt);
-    let mu = lerp(0.98, 1.66, onRoad) * s.grip;   /* antes 0.62..1.34: agarraba poco */
+    /* el barro/arena no castiga igual a un 4x4 que a un prototipo bajo */
+    const muRoad = 1.66 * s.grip, muOff = 0.98 * s.grip * ((s.offRoad || 0.75) / 0.75);
+    let mu = lerp(muOff, muRoad, onRoad);
     if (opts.ice) mu *= 0.45;
     const downf = 1 + s.downforce * clamp(absV / 62, 0, 1.5) * 0.5;
     const latMax = mu * G98 * downf;              /* m/s² máximo de neumático */
@@ -4513,25 +4568,53 @@ void main(){
     car.driftHold = breaking ? 1 : Math.max(0, (car.driftHold || 0) - dt * 2.6);
     const holdK = clamp(breaking ? 1 : (car.driftHold > 0 && slipAng > 0.22 ? 0.72 : 0), 0, 1);
     /* --- dirección --- */
+    const thr = car.throttle, brk = car.brake;
     const speedK = clamp(absV / top, 0, 1);
-    const steerMax = lerp(0.62, 0.20, Math.pow(speedK, 0.8));
-    let targetYawRate = (vf / Math.max(2.4, wb)) * Math.tan(car.steer * steerMax);
+    const agi = s.agility || 1;
+    const steerMax = lerp(0.62, 0.20, Math.pow(speedK, 0.8)) * agi;
+    let targetYawRate = (vf / Math.max(2.4, wb)) * Math.tan(clamp(car.steer, -1, 1) * steerMax);
     /* Límite físico de giro (círculo de fricción): yawRate máx = a_lat / v.
-       Con agarre normal el coche NUNCA se pasa de ahí -> subviraje limpio,
-       no derrape. Sólo con la tecla de derrape se permite sobre-rotar. */
-    const yawCap = (latMax * (breaking ? 1.62 : 1.02)) / Math.max(6, Math.abs(vf));
-    targetYawRate = clamp(targetYawRate, -yawCap, yawCap);
+       Con agarre normal el coche NUNCA se pasa de ahí -> subviraje limpio. */
+    const bal = s.balance || 0;
+    let capK = breaking ? (1.26 + 0.36 * (s.drift || 1)) : 1.02;
+    /* el reparto de par cambia cómo gira el coche:
+       trasera acelera y suelta el culo, delantera acelera y se abre, 4xd plano */
+    if (thr > 0.1) capK *= 1 + bal * 0.34 * thr;
+    if (brk > 0.15) capK *= (s.drive === 'fwd' ? 1.12 : 0.95);
+    const yawCap = (latMax * capK) / Math.max(6, Math.abs(vf));
+    /* con el pie a fondo el morro/cola pesan según el reparto: un V8 trasero
+       gira DE MÁS (el par vence al neumático trasero), un delantera se abre */
+    const powAuth = 1 + bal * Math.max(thr, 0) * 0.62 + (s.drive === 'fwd' ? 0.10 * Math.max(thr, 0) : 0);
+    targetYawRate = clamp(targetYawRate * powAuth, -yawCap, yawCap);
     /* respuesta de dirección algo más lenta: el coche no se "carga" de ángulo
        en 2 fotogramas (antes de esto, un volantazo ya era derrape) */
-    const resp = clamp(5.2 - speedK * 1.4, 3.0, 5.8);
+    const resp = clamp(5.2 - speedK * 1.4, 3.0, 5.8) * (0.80 + 0.22 * agi);
     car.yawRate = G.damp(car.yawRate, targetYawRate, resp, dt);
+    /* --- caja de cambios, par motor y vueltas --- */
+    const gb = gearbox(s);
+    let gi = clamp(car.gearIdx | 0, 0, gb.n - 1);
+    let gearTop = gb.topMs / gb.ratios[gi];
+    let rpm = clamp(Math.abs(vf) / Math.max(2, gearTop) * gb.redline, gb.idle, gb.redline * 1.10);
+    car.shiftT = Math.max(0, (car.shiftT || 0) - dt);
+    car.shiftFx = Math.max(0, (car.shiftFx || 0) - dt * 5);   /* la ventanilla de aviso del cambio */
+    if (car.shiftT <= 0) {
+      const u = rpm / gb.redline;
+      if (u > 0.985 && gi < gb.n - 1) { car.gearIdx = gi + 1; car.shiftT = 0.075; car.shiftFx = 1; }
+      else if (u < 0.44 && gi > 0) { car.gearIdx = gi - 1; car.shiftT = 0.062; }
+      gi = clamp(car.gearIdx | 0, 0, gb.n - 1);
+      gearTop = gb.topMs / gb.ratios[gi];
+      rpm = clamp(Math.abs(vf) / Math.max(2, gearTop) * gb.redline, gb.idle, gb.redline * 1.10);
+    }
+    car.gearN = gi + 1; car.engineRPM = rpm;
+    const tq = torqueK(s, clamp(rpm / gb.redline, 0, 1.1));
     /* --- fuerzas longitudinales --- */
     let Fi = 0;
-    const thr = car.throttle, brk = car.brake;
-    const boostK = 1 + car.boost * 0.42;
+    const boostK = 1 + car.boost * (0.30 + 0.10 * (s.boost || 1));
     if (thr > 0) {
-      const f = 1 - clamp(Math.abs(vf) / top, 0, 1) * 0.82;
-      Fi += s.power * 12400 * thr * Math.pow(clamp(f, 0, 1), 0.72) * boostK;
+      /* el corte de encendido es POR MARCHA: en 1ª se acaba el empuje pronto y
+         hay que cambiar (eso es lo que hace que 4, 5, 6 y 7 marchas se noten) */
+      const f = 1 - Math.pow(clamp(Math.abs(vf) / Math.max(2, gearTop), 0, 1), 2) * 0.45;
+      Fi += s.power * 12400 * thr * Math.pow(clamp(f, 0, 1), 0.7) * boostK * tq * (1 - clamp(car.shiftT * 6.0, 0, 0.52));
     } else if (thr < 0) {
       Fi -= s.power * 5600 * (vf > 0.6 ? 1 : clamp(1 - Math.abs(vf) / (top * 0.42), 0, 1.5)) * Math.abs(thr);
     }
@@ -4542,8 +4625,9 @@ void main(){
     } else if (Math.abs(thr) < 0.02) {
       Fi -= Math.sign(vf) * (170 + 0.9 * mass * 0.06) * Math.min(Math.abs(vf), 3);
     }
-    /* freno de mano: frena el eje trasero y suelta agarre lateral */
-    if (car.handbrake > 0.3) Fi -= Math.sign(vf) * 3400 * car.handbrake;
+    /* freno de mano: frena el eje trasero SÓLO si no estás acelerando (si no,
+       en un arcade el truco es mano + gas para sostener el derrape) */
+    if (car.handbrake > 0.3 && thr < 0.35) Fi -= Math.sign(vf) * 3400 * car.handbrake;
     /* arrastre */
     const cdA = def.style === 'proto' ? 0.42 : (def.style === 'suv' ? 1.05 : 0.62);
     Fi -= 0.5 * 1.2 * cdA * 2.1 * vf * Math.abs(vf) * 0.42;
@@ -4553,7 +4637,12 @@ void main(){
     /* --- fuerzas laterales (los neumáticos intentan anular vr) --- */
     /* fricción lateral de las ruedas traseras: muy alta en conducciín normal
        (anula el deslizamiento en ~0.05 s) y se suelta sólo con la tecla */
-    const gripLat = lerp(27, 18, speedK) * (1 - 0.82 * Math.max(driftIn, holdK));
+    const release = clamp(0.58 + 0.24 * (s.drift || 1), 0.48, 0.92);
+    /* y el eje trasero aguanta menos cuanto más par le metes (si es motriz):
+       por eso el Hammer se cruza solo al acelerar y el Grizzly no */
+    const rearGrip = clamp(1 - Math.max(bal, 0) * Math.max(thr, 0) * 0.40 * (s.drive === 'fwd' ? 0.35 : 1)
+      + (s.drive === 'awd' ? 0.10 * Math.max(thr, 0) : 0), 0.55, 1.18);
+    const gripLat = lerp(27, 18, speedK) * (1 - release * Math.max(driftIn, holdK)) * rearGrip;
     let latAcc = -vr * gripLat * (mu / 1.25);
     /* tope de fuerza lateral: muy alto en conducciín normal (la rueda trasera
        AGUANTA el régimen y no desliza) y más bajo al derrapar */
@@ -4562,6 +4651,30 @@ void main(){
     /* con el derrape mantenido y gas, el trompo no frena el coche: las ruedas
        deslizando "empujan" hacia delante (arcade, evita derrapes a 30 km/h) */
     if (breaking && vf > 5 && thr > 0.15) Fi += Math.min(s.power * 9600, Math.abs(latAcc) * mass * 0.40);
+    /* --- tracción disponible: el círculo de fricción y el eje motriz --- *
+     * si el motor pide más fuerza de la que el neumático puede meter en el
+     * suelo, patina: se pierde empuje, sale humo y el coche cambia de
+     * carácter (el V8 trasero no es lo mismo que el 4x4 de 2150 kg). */
+    {
+      const loadLat = clamp(Math.abs(latAcc) / (latMax * 1.02), 0, 1);
+      let share = s.drive === 'awd' ? 0.92 : (s.drive === 'fwd' ? 0.56 - 0.08 * Math.max(thr, 0) : 0.46 + 0.12 * Math.max(thr, 0));
+      /* en un derrape sostenido el par es lo que mantiene el ángulo: ahí el eje
+         motriz manda aunque el neumático esté cruzado (si no, nadie derrapa) */
+      if (breaking) share = Math.max(share, 0.72 + 0.06 * (s.drift || 1));
+      share *= 1 + s.downforce * clamp(Math.abs(vf) / 62, 0, 1.5) * 0.20;
+      /* el patinaje come agarre, pero en un arcade el freno de mano suelta el
+         eje trasero sin matar el empuje (mano + gas = derrape sostenido) */
+      const maxDrive = Math.max(900, mu * G98 * mass * share * (1 - 0.40 * loadLat * (breaking ? 0.45 : 1)));
+      if (Fi > maxDrive) {
+        const over = (Fi - maxDrive) / maxDrive;
+        Fi = maxDrive * (1 - clamp(over * 0.26, 0, 0.34));
+        /* por encima de un 6 % de exceso empieza a cantear; hace falta un buen
+           excedente (salida en 1ª con un V8) para que patine DE VERDAD */
+        car.wheelspin = G.damp(car.wheelspin || 0, clamp((over - 0.03) * 2.2, 0, 1), 15, dt);
+      } else {
+        car.wheelspin = G.damp(car.wheelspin || 0, 0, 7, dt);
+      }
+    }
     /* --- integración en marco rotatorio --- */
     const acc = Fi / mass;
     let nvf = vf + (acc + vr * car.yawRate) * dt;
@@ -4627,10 +4740,11 @@ void main(){
     const fwdSlope = (world.height.at(car.pos[0] + fwd[0] * 2.2, car.pos[2] + fwd[2] * 2.2) - world.height.at(car.pos[0] - fwd[0] * 2.2, car.pos[2] - fwd[2] * 2.2)) / 4.4;
     const rightSlope = (world.height.at(car.pos[0] + right[0] * 1.7, car.pos[2] + right[2] * 1.7) - world.height.at(car.pos[0] - right[0] * 1.7, car.pos[2] - right[2] * 1.7)) / 3.4;
     const accLat = -latAcc;
-    const transfer = clamp(-accLat * 0.011, -0.10, 0.10);
+    const rideK = clamp(s.ride || 1, 0.25, 1.3);
+    const transfer = clamp(-accLat * 0.011 * (0.45 + 0.75 * rideK), -0.14, 0.14);
     const transferL = clamp(-acc * 0.006, -0.07, 0.07);
-    car.pitch = G.damp(car.pitch, Math.atan(fwdSlope) * 0.85 + transferL, 9, dt);
-    car.roll = G.damp(car.roll, Math.atan(rightSlope) * 0.85 + transfer, 9, dt);
+    car.pitch = G.damp(car.pitch, Math.atan(fwdSlope) * 0.85 + transferL * (0.5 + 0.7 * rideK), 9, dt);
+    car.roll = G.damp(car.roll, Math.atan(rightSlope) * 0.85 + transfer * rideK, 11 - 3 * rideK, dt);
     car.bounce = G.damp(car.bounce, 0, 8, dt);
     /* --- límites de pista (quitamiedos / muros), con CCD --- *
      * 1) se mide la lateral LOCAL (ventana de índices) en el punto de
@@ -4670,7 +4784,7 @@ void main(){
         car.yawRate *= 0.42;
         car.hitDir[0] = -nx; car.hitDir[1] = -nz;
         if (vOut > 2.5) {
-          car.damage = clamp(car.damage + vOut * 0.017, 0, 1);
+          car.damage = clamp(car.damage + vOut * 0.017 * (def.stats.fragility || 1), 0, 1);
           car.hitTimer = 0.35;
           if (world.onHit) world.onHit(car, vOut, car.pos[0], car.pos[1], car.pos[2]);
         }
@@ -4709,7 +4823,7 @@ void main(){
           car.yawRate *= 0.36;
           car.hitDir[0] = -nx; car.hitDir[1] = -nz;
           if (-vOut > 2.2) {
-            car.damage = clamp(car.damage + (-vOut) * 0.020, 0, 1);
+            car.damage = clamp(car.damage + (-vOut) * 0.020 * (def.stats.fragility || 1), 0, 1);
             car.hitTimer = 0.34;
             if (world.onHit) world.onHit(car, -vOut, car.pos[0], car.pos[1], car.pos[2]);
           }
@@ -4728,7 +4842,8 @@ void main(){
     /* --- ruedas / rpm --- */
     car.wheelSpin += (nvf / Math.max(0.2, def.wheelR)) * dt;
     car.steerVis = G.damp(car.steerVis, car.steer * steerMax, 13, dt);
-    car.engineRPM = lerp(850, 6400 + (car.boost ? 1100 : 0), clamp(Math.abs(nvf) / (top * 0.72) + Math.abs(thr) * 0.12, 0, 1.08));
+    /* (rpm ya viene de la caja de cambios arriba; aquí sólo el ralentí) */
+    if (car.throttle === 0 && car.speed < 1) car.engineRPM = gb.idle + Math.sin((car.speed + rpm) * 0.012) * 40;
     if (car.throttle === 0 && car.speed < 1) car.engineRPM = 820 + Math.sin(performance.now() * 0.012) * 40;
     /* combustible de nitro */
     if (car.boost > 0.05) car.boostFuel = Math.max(0, car.boostFuel - dt * 26);
@@ -4851,15 +4966,21 @@ void main(){
         }
       }
     }
-    car.steer = clamp(err * 2.35 - car.yawRate * 0.30, -1, 1);
     /* velocidad objetivo: límite por radio + pendiente */
     const rmin = Math.max(14, Math.min(r, 260));
-    const mu = 1.16 * car.stats.grip * (car.onRoad > 0.5 ? 1 : 0.66);
+    const cst = car.stats;
+    /* cada IA conduce CON su coche: el 4x4 no le teme a la tierra, el nervioso
+       de tracción trasera levanta el pie a media curva, el ágil traza más tarde */
+    const mu = 1.16 * cst.grip * (car.onRoad > 0.5 ? 1 : 0.45 + 0.30 * clamp(cst.offRoad || 0.75, 0.5, 1.05));
     let vMax = Math.sqrt(Math.max(6, rmin * G98 * mu * (targetSpeedK || 0.94)));
-    vMax = Math.min(vMax, car.stats.top / 3.6 * (targetSpeedK || 0.94));
+    vMax = Math.min(vMax, cst.top / 3.6 * (targetSpeedK || 0.94));
     if (Math.abs(err) > 1.0) vMax *= 0.5;
-    if (car.speed > vMax * 1.06) { car.throttle = 0; car.brake = clamp((car.speed - vMax) * 0.22, 0, 1); car.handbrake = car.speed > vMax * 1.5 && Math.abs(err) > 0.8 ? 0.8 : 0; }
+    if (car.speed > vMax * 1.06) { car.throttle = 0; car.brake = clamp((car.speed - vMax) * (0.22 / clamp(cst.brake || 1, 0.75, 1.15)), 0, 1); car.handbrake = car.speed > vMax * 1.5 && Math.abs(err) > 0.8 && (cst.drift || 1) > 1.05 ? 0.8 : 0; }
     else { car.throttle = clamp((vMax - car.speed) * 0.5 + 0.35, 0, 1); car.brake = 0; car.handbrake = 0; }
+    /* el que se suelta detrás (balance > 0.2) cuida el gas en apoyo: si no,
+       los rivales irían de lado por todas partes y no se entendería nada */
+    if ((cst.balance || 0) > 0.2 && Math.abs(err) > 0.30 && car.speed > vMax * 0.92) car.throttle = Math.min(car.throttle, 0.58);
+    car.steer = clamp(err * 2.35 * (0.88 + 0.14 * clamp(cst.agility || 1, 0.7, 1.3)) - car.yawRate * 0.30, -1, 1);
     /* salida de derrape */
     if (Math.abs(car.vr) > 7.5) { car.throttle *= 0.45; car.brake = Math.max(car.brake, 0.15); }
     car.boost = (vMax > car.speed * 1.4 && car.boostFuel > 40 && (targetSpeedK || 1) > 0.95) ? 0.8 : 0;
@@ -4940,11 +5061,12 @@ void main(){
   FX.prototype.clear = function () { for (const p of this.list) p.active = false; };
 
   /* ---------- emisores ---------- */
-  function tireSmoke(fx, car, world, intensity) {
+  function tireSmoke(fx, car, world, intensity, axle) {
     const c = Math.cos(car.yaw), s = Math.sin(car.yaw);
     const def = car.def;
+    const lz = axle === 'f' ? def.wb / 2 : -def.wb / 2;   /* humo en el eje que patina */
     for (const side of [-1, 1]) {
-      const lx = side * def.track / 2, lz = -def.wb / 2;
+      const lx = side * def.track / 2;
       const wx = car.pos[0] + lx * c + lz * s, wz = car.pos[2] - lx * s + lz * c;
       const gy = world.height.at(wx, wz) + 0.1;
       const n = intensity > 0.6 ? 2 : 1;
@@ -5247,8 +5369,24 @@ void main(){
     x.fillText(Math.round(kmh), 0, R * 0.34);
     x.fillStyle = 'rgba(190,210,240,0.7)'; x.font = '600 11px system-ui,sans-serif';
     x.fillText('KM/H', 0, R * 0.52);
-    x.fillStyle = 'rgba(190,210,240,0.85)'; x.font = '600 12px ui-monospace,monospace';
-    x.fillText('M' + Math.max(1, Math.round(1 + clamp(Math.log(Math.max(1, kmh)) / Math.log(70), 0, 1) * 5)), 0, -R * 0.42);
+    x.fillStyle = 'rgba(190,210,240,0.85)'; x.font = '700 13px ui-monospace,monospace';
+    x.fillText('M' + (p.gearN || 1) + '/' + (p.stats.gears || 5), 0, -R * 0.42);
+    /* arco de vueltas con el corte de encendido de cada motor (no el mismo
+       para todos: 5 000 rpm el 4x4, 11 000 el prototipo) */
+    {
+      const rl = p.stats.redline || 7000, ur = clamp((p.engineRPM || 800) / rl, 0, 1.05);
+      x.beginPath(); x.arc(0, 0, R + 15, a0, lerp(a0, a1, clamp(ur, 0, 1)));
+      x.strokeStyle = ur > 0.985 ? '#ff5a4a' : (ur > 0.86 ? '#ffb14a' : '#8fd0ff');
+      x.lineWidth = 3.6; x.stroke();
+      x.fillStyle = 'rgba(190,210,240,0.55)'; x.font = '600 10px ui-monospace,monospace';
+      x.fillText(Math.round(p.engineRPM || 800) + ' rpm', 0, -R * 0.22);
+      /* cuando patina (salida, derrape) se ve: el coche no es sólo una barra */
+      if ((p.wheelspin || 0) > 0.12) {
+        x.fillStyle = 'rgba(255,150,70,' + (0.35 + 0.5 * p.wheelspin).toFixed(2) + ')';
+        x.font = '800 10px ui-monospace,monospace';
+        x.fillText('PATINA', 0, R * 0.72);
+      }
+    }
     /* nitro */
     const bf = p.boostFuel / 100;
     x.beginPath(); x.arc(0, 0, R + 3, a1 - 0.1, lerp(a1, a1 - 0.62, 1 - bf) , true);
@@ -5262,7 +5400,9 @@ void main(){
     const hudLines = game.hudLines ? game.hudLines() : [];
     x.save();
     x.font = '700 13px system-ui,sans-serif';
-    let yy = 20;
+    /* empieza por debajo de la tira de contexto del DOM (arriba al centro): así
+       la esquina superior izquierda la controla sólo este panel y nada se pisa */
+    let yy = 72;
     for (const l of hudLines) {
       const big = l.big;
       x.textAlign = 'left';
@@ -5276,6 +5416,24 @@ void main(){
       x.fillText(l.v, 22 + x.measureText(l.k).width * (big ? 1.16 : 1) + 8, yy + (big ? 5 : 3));
       x.font = '700 13px system-ui,sans-serif';
       yy += big ? 36 : 30;
+    }
+    /* para qué sirve este modo, siempre visible (no sólo en el menú) */
+    const md = game.modeDef;
+    if (md && md.win) {
+      const maxW = Math.min(246, w * 0.28);
+      x.font = '600 11.5px system-ui,sans-serif';
+      const words = ('objetivo: ' + md.win).split(' ');
+      let l1 = '', l2 = '';
+      for (let k = 0; k < words.length; k++) {
+        const word = words[k];
+        if (!l2 && x.measureText((l1 ? l1 + ' ' : '') + word).width <= maxW) l1 = (l1 ? l1 + ' ' : '') + word;
+        else l2 = l2 ? l2 + ' ' + word : word;
+      }
+      x.fillStyle = 'rgba(6,8,14,0.40)';
+      roundRect(x, 14, yy - 10, maxW + 16, l2 ? 36 : 21, 6); x.fill();
+      x.fillStyle = 'rgba(178,204,240,0.74)';
+      x.fillText(l1, 22, yy + 4);
+      if (l2) x.fillText(l2, 22, yy + 18);
     }
     x.restore();
 
@@ -5383,6 +5541,7 @@ void main(){
       '    <label class="chk"><input type="checkbox" data-o="shadows" checked><span>Sombras</span></label>' +
       '    <label class="chk"><input type="checkbox" data-o="particles" checked><span>Humo y chispas</span></label>' +
       '    <label class="chk"><input type="checkbox" data-o="sound" checked><span>Sonido</span></label>' +
+      '    <label class="chk"><input type="checkbox" data-o="music" checked><span>Música de fondo</span></label>' +
       '    <label class="sel"><span>Calidad</span><select data-o="quality"><option value="low">baja</option><option value="med" selected>media</option><option value="high">alta</option></select></label>' +
       '    <label class="sel"><span>Vueltas</span><select data-o="laps"><option>2</option><option selected>3</option><option>5</option><option>8</option></select></label>' +
       '    <label class="sel"><span>Derrape</span><select data-o="drift"><option value="manual" selected>manual (SHIFT)</option><option value="auto">automático</option></select></label>' +
@@ -5433,7 +5592,9 @@ void main(){
       box.innerHTML = list.map((m, i) => '<div class="card' + (i === 0 ? ' sel' : '') + '" data-k="' + m.id + '">' + html(m, i) + '</div>').join('');
     };
     mk(maps, 'maps', 'map', m => '<b>' + m.name + '</b><small>' + m.blurb + '</small><em class="mw">' + m.time + '</em>');
-    mk(modes, 'modes', 'mode', m => '<b>' + m.name + '</b><small>' + m.blurb + '</small>');
+    mk(modes, 'modes', 'mode', m => '<b>' + m.name + '</b><small>' + m.blurb + '</small>' +
+      (m.info ? '<span class="fine">' + m.info + '</span>' : '') +
+      (m.win ? '<span class="win">→ ' + m.win + '</span>' : ''));
     mk(cars, 'cars', 'car', c => '<b>' + c.name + '</b><small>' + c.blurb + '</small>');
     this.maps = maps; this.modes = modes; this.cars = cars;
     this.showStats(cars[0]);
@@ -5450,10 +5611,34 @@ void main(){
   };
   Screens.prototype.showStats = function (c) {
     const s = this.root.querySelector('.stats');
-    const bar = (k, v) => '<div class="st"><span>' + k + '</span><i><b style="width:' + Math.round(clamp(v, 0, 1) * 100) + '%"></b></i></div>';
-    s.innerHTML = bar('potencia', c.stats.power / 1.1) + bar('agarre', c.stats.grip / 1.15) +
-      bar('frenada', c.stats.brake / 1.15) + bar('velocidad', c.stats.top / 300) +
-      bar('derrape', c.stats.drift / 1.1) + '<div class="st"><span>peso</span><i class="w">' + c.stats.mass + ' kg</i></div>';
+    const st = c.stats;
+    const bar = (k, v, txt) => '<div class="st"><span>' + k + '</span><i><b style="width:' +
+      Math.round(clamp(v, 0, 1) * 100) + '%"></b></i>' + (txt ? '<u>' + txt + '</u>' : '') + '</div>';
+    const ch = {
+      coupe: 'neutro y predecible: es el listón con el que se comparan los demás',
+      muscle: 'V8 de par: te arranca de las manos en recta y patina en 1ª; suelto de culo al entrar y frena tarde',
+      hatch: 'delantera nerviosa en curva lenta, subvirador en rápida y sin aire por encima de 200',
+      suv: '4x4 alto y blando: sale como un tiro en tierra, baila en asfalto y no frena',
+      proto: '7 marchas a 11 000 rpm con carga aerodinámica: letal y frágil, castiga cualquier toque'
+    }[c.id] || 'un poco de todo y perfecto en nada';
+    const drive = { rwd: 'trasera', fwd: 'delantera', awd: '4x4' }[st.drive] || '—';
+    const ride = clamp(st.ride || 1, 0, 1.3);
+    s.innerHTML =
+      '<div class="shead">' + c.name +
+      '<em>' + st.mass + ' kg · tracción ' + drive + ' · ' + (st.gears || 5) +
+      ' marchas · corte ' + (Math.round((st.redline || 7000) / 100) / 10) + ' krpm · ' +
+      (st.cyl || 6) + ' cilindros</em></div>' +
+      bar('empuje', (st.power * (st.torqueK || 1)) / 1.6, 'par ' + Math.round((st.torqueK || 1) * 100) + '%') +
+      bar('puntería', st.top / 300, st.top + ' km/h') +
+      bar('agarre', st.grip / 1.2, Math.round(st.grip * 100) + '%') +
+      bar('frenada', st.brake / 1.15, Math.round(st.brake * 100) + '%') +
+      bar('agilidad', (st.agility || 1) / 1.3, (st.agility || 1) < 0.9 ? 'perezoso' : ((st.agility || 1) > 1.1 ? 'cuchillo' : 'normal')) +
+      bar('equilibrio', 0.5 + (st.balance || 0) * 0.5, (st.balance || 0) > 0.2 ? 'se suelta detrás' : ((st.balance || 0) < -0.1 ? 'se abre delante' : 'neutro')) +
+      bar('tierra', (st.offRoad || 0.75) / 1.05, (st.offRoad || 0.75) > 0.9 ? 'agarra en barro' : 'patina en barro') +
+      bar('confort', 1.25 - ride, ride > 1 ? 'blanda, se menea' : (ride < 0.5 ? 'dura, sin mullido' : 'deportiva')) +
+      bar('derrape', (st.drift || 1) / 1.4, 'facilidad para cruzarse') +
+      bar('chapa', 1.4 - (st.fragility || 1), (st.fragility || 1) > 1.2 ? 'se daña de más' : 'aguanta el golpe') +
+      '<div class="sfoot">' + ch + '</div>';
   };
   Screens.prototype.sync = function () {
     const get = cls => { const c = this.root.querySelector('.' + cls + ' .card.sel'); return c ? c.getAttribute('data-k') : null; };
@@ -5566,70 +5751,131 @@ void main(){
   Sound.prototype.addCar = function (o) {
     if (!this.ok) { this.pending.push(o); return null; }
     const ctx = this.ctx;
-    const v = { name: o.name || 'car', player: !!o.player };
+    const cyl = o.cyl || 6;
+    /* un V8 cruje grave y con galope; un 3 cilindros es una avispa chillona;
+       un 4 turbo pita; un prototipo de 11 000 rpm aúlla. Todo sale del nº de
+       cilindros, el corte de encendido y si lleva turbo (datos de meshes.js). */
+    const pitch = 1.28 - 0.045 * cyl;
+    const lope = cyl >= 8 ? 0.11 : (cyl <= 3 ? 0.085 : (cyl === 4 ? 0.05 : 0.028));
+    const v = {
+      name: o.name || 'car', player: !!o.player, cyl,
+      redline: o.redline || 7000, turbo: !!o.turbo, drive: o.drive || 'rwd',
+      pitch, lope, charge: cyl / 6
+    };
     v.g = ctx.createGain(); v.g.gain.value = 0;
     v.pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
     v.lp = ctx.createBiquadFilter(); v.lp.type = 'lowpass'; v.lp.frequency.value = 1800; v.lp.Q.value = 0.6;
     v.osc1 = ctx.createOscillator(); v.osc1.type = 'sawtooth';
-    v.osc2 = ctx.createOscillator(); v.osc2.type = 'square'; v.osc2.detune.value = 8;
-    v.osc3 = ctx.createOscillator(); v.osc3.type = 'triangle';
-    v.g1 = ctx.createGain(); v.g1.gain.value = 0.55;
-    v.g2 = ctx.createGain(); v.g2.gain.value = 0.30;
-    v.g3 = ctx.createGain(); v.g3.gain.value = 0.22;
+    v.osc2 = ctx.createOscillator(); v.osc2.type = cyl >= 8 ? 'square' : 'sawtooth'; v.osc2.detune.value = cyl >= 8 ? 14 : 6;
+    v.osc3 = ctx.createOscillator(); v.osc3.type = cyl <= 4 ? 'square' : 'triangle';
+    v.g1 = ctx.createGain(); v.g1.gain.value = 0.50;
+    v.g2 = ctx.createGain(); v.g2.gain.value = 0.26 + (cyl >= 8 ? 0.16 : 0);
+    v.g3 = ctx.createGain(); v.g3.gain.value = 0.14;
+    /* sub-grave: el retumbo del escape gordo (V8 / motor largo) */
+    v.sub = ctx.createOscillator(); v.sub.type = 'sine';
+    v.gs = ctx.createGain(); v.gs.gain.value = (cyl >= 8 ? 0.34 : (cyl <= 4 ? 0.20 : 0.10));
+    /* pito del turbo */
+    v.whine = ctx.createOscillator(); v.whine.type = 'sine';
+    v.gw = ctx.createGain(); v.gw.gain.value = 0;
+    /* ruido de escape/admisión */
     v.noise = ctx.createBufferSource(); v.noise.buffer = this.noise; v.noise.loop = true;
     v.nf = ctx.createBiquadFilter(); v.nf.type = 'bandpass'; v.nf.frequency.value = 300; v.nf.Q.value = 0.8;
     v.ng = ctx.createGain(); v.ng.gain.value = 0.14;
+    /* LFO de galope (desuniformidad de encendido) */
+    v.lfo = ctx.createOscillator(); v.lfo.type = 'sine';
+    v.lfoG = ctx.createGain(); v.lfoG.gain.value = 0;
     v.osc1.connect(v.g1); v.g1.connect(v.lp);
     v.osc2.connect(v.g2); v.g2.connect(v.lp);
     v.osc3.connect(v.g3); v.g3.connect(v.lp);
+    v.sub.connect(v.gs); v.gs.connect(v.lp);
+    v.whine.connect(v.gw); v.gw.connect(v.lp);
     v.noise.connect(v.nf); v.nf.connect(v.ng); v.ng.connect(v.lp);
+    v.lfo.connect(v.lfoG); v.lfoG.connect(v.g.gain);
     v.lp.connect(v.g);
     if (v.pan) { v.g.connect(v.pan); v.pan.connect(this.busEngine); } else v.g.connect(this.busEngine);
     const t = ctx.currentTime;
-    v.osc1.start(t); v.osc2.start(t); v.osc3.start(t); v.noise.start(t);
-    v.charge = o.charge || 1;      /* nº de cilindros relativo */
+    v.osc1.start(t); v.osc2.start(t); v.osc3.start(t); v.sub.start(t); v.whine.start(t); v.noise.start(t); v.lfo.start(t);
     this.voices.push(v);
     return v;
   };
   Sound.prototype.update = function (cars, listener, dt, info) {
     if (!this.ok) return;
-    const ctx = this.ctx, t = ctx.currentTime;
+    const ctx = this.ctx, t = ctx.currentTime, K = 0.05;
+    info = info || {};
+    this.intensity = G.damp(this.intensity || 0, clamp(info.intensity == null ? 0.4 : info.intensity, 0, 1), 1.4, dt || 0.016);
     /* 1) motor de cada coche: el primero es el del jugador */
+    this._f = (this._f | 0) + 1;
     for (let i = 0; i < this.voices.length; i++) {
       const v = this.voices[i];
       const car = cars[i];
-      if (!car) { v.g.gain.value = 0; continue; }
+      if (!car) { v.g.gain.setTargetAtTime(0, t, K); continue; }
+      /* los motores ajenos se refrescan a 30 Hz con suavizado: en un Chromebook
+         son 5 voces y no se nota (el tuyo va a pleno cada fotograma) */
+      if (!v.player && (this._f & 1)) continue;
       const dx = car.pos[0] - listener.x, dz = car.pos[2] - listener.z;
       const d = Math.hypot(dx, dz);
       const near = clamp(1 - d / (v.player ? 260 : 95), 0, 1);
       const away = v.player ? 1 : near * near;
-      const rpm = car.engineRPM / 60;
-      const o1 = clamp(rpm * (1.6 + 0.5 * v.charge), 22, 520);
-      const load = Math.abs(car.throttle) * 0.6 + clamp(car.speed / 60, 0, 1) * 0.4 + (car.brake > 0.2 ? 0.15 : 0);
-      v.osc1.frequency.setTargetAtTime(o1, t, 0.045);
-      v.osc2.frequency.setTargetAtTime(o1 * 0.5, t, 0.045);
-      v.osc3.frequency.setTargetAtTime(o1 * 1.006, t, 0.05);
-      v.lp.frequency.setTargetAtTime(700 + 3400 * near * (0.35 + load) + (car.boost ? 2600 : 0), t, 0.06);
-      v.g.gain.setTargetAtTime((v.player ? 0.30 : 0.20) * (0.28 + load * 0.85) * away, t, 0.07);
+      const rpm = clamp(car.engineRPM || 900, 600, v.redline * 1.12);
+      const rpmHz = rpm / 60;
+      const u = rpm / v.redline;
+      const base = rpmHz * (2.6 - 0.09 * v.cyl) * v.pitch;
+      const load = clamp(Math.abs(car.throttle) * 0.62 + clamp(car.speed / 60, 0, 1) * 0.32 + (car.brake > 0.2 ? 0.12 : 0), 0, 1.3);
+      const spin = clamp(car.wheelspin || 0, 0, 1);
+      v.osc1.frequency.setTargetAtTime(base, t, K);
+      v.osc2.frequency.setTargetAtTime(base * 0.5, t, K);
+      v.osc3.frequency.setTargetAtTime(base * (2.98 + 0.02 * v.cyl), t, K);
+      v.sub.frequency.setTargetAtTime(base * 0.5, t, K);
+      v.lfo.frequency.setTargetAtTime(Math.max(3.5, rpmHz * 0.5), t, 0.2);
+      v.lfoG.gain.setTargetAtTime(v.lope * (0.30 + load * 0.5) * (v.player ? 1 : 0.6), t, 0.1);
+      v.lp.frequency.setTargetAtTime(600 + 3200 * near * (0.32 + load) + (car.boost ? 2400 : 0) + u * 900, t, K);
+      v.g1.gain.setTargetAtTime(0.30 + 0.24 * load, t, 0.08);
+      v.g2.gain.setTargetAtTime(0.14 + 0.20 * load + (v.cyl >= 8 ? 0.10 : 0), t, 0.08);
+      v.g3.gain.setTargetAtTime(0.05 + 0.15 * clamp((u - 0.45) / 0.55, 0, 1), t, 0.08);
+      v.gs.gain.setTargetAtTime((v.cyl >= 8 ? 0.30 : 0.10) * (0.4 + load) * (1 + spin * 0.7), t, 0.09);
+      /* escape: más abierto cuanto más cerca + patinando */
+      v.ng.gain.setTargetAtTime(0.10 + 0.16 * load + 0.34 * spin, t, 0.06);
+      v.nf.frequency.setTargetAtTime(190 + 1050 * near + 620 * u + 900 * spin, t, 0.08);
+      if (v.turbo) {
+        v.whine.frequency.setTargetAtTime(900 + 44 * rpmHz + (car.boost ? 900 : 0), t, 0.09);
+        v.gw.gain.setTargetAtTime(0.020 * clamp((u - 0.25) * 2.1, 0, 1) * (0.4 + load), t, 0.1);
+      }
+      v.g.gain.setTargetAtTime((v.player ? 0.30 : 0.19) * (0.26 + load * 0.82) * away * (1 - 0.25 * clamp(car.damage, 0, 1)), t, 0.07);
       if (v.pan) {
-        const rx = (dx * Math.cos(-listener.yaw) - dz * Math.sin(-listener.yaw));
+        const cy = Math.cos(-listener.yaw), sy = Math.sin(-listener.yaw);
+        const rx = dx * cy - dz * sy;
         v.pan.pan.setTargetAtTime(clamp(rx / 26, -1, 1) * (v.player ? 0 : 0.85), t, 0.05);
       }
-      if (!v.player) {
-        v.nf.frequency.setTargetAtTime(240 + 900 * near, t, 0.1);
-      }
+      /* golpe de cambio / contraexplosión (sólo el jugador, para no multiplicar nodos) */
+      if (v.player && car.shiftFx > 0.5) { car.shiftFx = 0; this.pop(t, 0.5 + 0.5 * load); }
+      if (v.player && spin > 0.42) this.skitch(0.18 + 0.5 * spin);
     }
     /* 2) rodadas + viento */
     const p = cars[0];
     if (p) {
-      const sk = p.drifting ? clamp(Math.abs(p.vr) / 9, 0, 1) * (p.onRoad > 0.5 ? 1 : 0.5) : 0;
-      this.skid.g.gain.setTargetAtTime(0.0 + sk * (info.skidVol || 0.5) * (this.volOk === false ? 0 : 1), t, 0.05);
-      this.skid.f.frequency.setTargetAtTime(900 + 1500 * clamp(Math.abs(p.vr) / 12, 0, 1), t, 0.08);
-      const wnd = clamp(Math.pow(p.speed / 70, 1.7), 0, 1) * (p.onRoad > 0.5 ? 0.42 : 0.7);
+      const dirt = p.onRoad > 0.5 ? 0 : 1;
+      const sk = p.drifting ? clamp(Math.abs(p.vr) / 9, 0, 1) * (1 - 0.5 * dirt) : 0;
+      const spin = clamp(p.wheelspin || 0, 0, 1);
+      const skv = Math.max(sk, spin * 0.75);
+      this.skid.g.gain.setTargetAtTime(skv * (info.skidVol || 0.5), t, 0.05);
+      this.skid.f.frequency.setTargetAtTime(dirt ? 620 : 900 + 1500 * clamp(Math.abs(p.vr) / 12, 0, 1), t, 0.08);
+      const wnd = clamp(Math.pow(p.speed / 70, 1.7), 0, 1) * (dirt ? 0.7 : 0.42);
       this.wind.g.gain.setTargetAtTime(wnd * 0.30, t, 0.08);
       this.wind.f.frequency.setTargetAtTime(500 + p.speed * 22, t, 0.1);
     }
-    if (this.musicOn) this.tickMusic(t);
+    if (this.musicOn) this.tickMusic(t, this.intensity);
+  };
+  /* pequeña explosión de escape (cambio de marcha / levanta el pie) */
+  Sound.prototype.pop = function (t, g) {
+    if (!this.ok) return;
+    const ctx = this.ctx;
+    const s = ctx.createBufferSource(); s.buffer = this.noise;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 420 + Math.random() * 500; bp.Q.value = 0.9;
+    const gn = ctx.createGain();
+    gn.gain.setValueAtTime(0.20 * clamp(g || 0.6, 0, 1.4), t);
+    gn.gain.exponentialRampToValueAtTime(0.001, t + 0.10);
+    s.connect(bp); bp.connect(gn); gn.connect(this.busEngine);
+    s.start(t, Math.random() * 1.5); s.stop(t + 0.12);
   };
   Sound.prototype.stopVoices = function () {
     for (const v of this.voices) {
@@ -5684,25 +5930,50 @@ void main(){
     freqs.forEach((f, i) => setTimeout(() => this.blip(f, dur || 0.5, 'triangle', gain || 0.16), i * 55));
   };
   /* ---- música: pulso sencillo de 4 tiempos, se silencia sola si no se escucha ---- */
-  Sound.prototype.tickMusic = function (t) {
+  Sound.prototype.tickMusic = function (t, intensity) {
     const ctx = this.ctx;
+    const inten = clamp(intensity || 0, 0, 1);
+    /* el pulso se acelera cuando la carrera aprieta (persecución, adelantamientos) */
+    this.bpm = G.damp(this.bpm || 126, 118 + 30 * inten, 0.5, 0.05);
     const spb = 60 / this.bpm / 2;
     if (!this.musicStart) this.musicStart = t;
-    while (this.nextNote < t + 0.25) {
+    let guard = 0;
+    while (this.nextNote < t + 0.25 && guard++ < 12) {
       if (this.nextNote === 0) this.nextNote = t + 0.05;
       const b = this.beat % 16;
+      const bar = ((this.beat / 16) | 0) % 4;
       const tn = this.nextNote;
-      /* bombo */
+      /* batería */
       if (b % 4 === 0) this.drum(tn, 0.9, 'kick');
-      if (b % 8 === 4) this.drum(tn, 0.5, 'snare');
-      if (b % 2 === 1) this.drum(tn, 0.16, 'hat');
-      /* bajo */
-      const root = [55, 55, 73.4, 65.4][((this.beat / 16) | 0) % 4];
+      if (b % 8 === 4) this.drum(tn, 0.5 + 0.2 * inten, 'snare');
+      if (inten > 0.55 && b % 8 === 7) this.drum(tn, 0.22, 'snare');
+      if (b % 2 === 1) this.drum(tn, 0.10 + 0.12 * inten, 'hat');
+      /* bajo: A - F - C - G, enA menor, con la octava cuando acelera */
+      const root = [55, 43.65, 65.41, 49][bar];
       const pat = [0, 0, 7, 0, 5, 0, 3, 0, 0, 0, 7, 10, 5, 0, 3, 0];
       const n = root * Math.pow(2, pat[b] / 12);
       this.bass(tn, n, spb * 0.92);
+      /* capa aguda: arpegio de acorde, sólo si la cosa está alta de vueltas */
+      if (inten > 0.30) {
+        const triad = [[9, 12, 16], [8, 12, 15], [7, 12, 16], [7, 10, 14]][bar];
+        const pick = triad[(this.beat * 3) % 3];
+        this.lead(tn, root * 4 * Math.pow(2, pick / 12), spb * (0.55 + 0.3 * inten), 0.035 + 0.05 * inten);
+      }
+      /* platillo al empezar compás con toda la música encima */
+      if (inten > 0.78 && b === 0) this.drum(tn, 0.16, 'hat');
       this.nextNote += spb; this.beat++;
     }
+  };
+  Sound.prototype.lead = function (t, f, dur, g) {
+    const ctx = this.ctx;
+    const o = ctx.createOscillator(), gn = ctx.createGain(), lp = ctx.createBiquadFilter();
+    o.type = 'triangle'; o.frequency.value = f;
+    lp.type = 'lowpass'; lp.frequency.value = 2600 + 3000 * g * 6;
+    gn.gain.setValueAtTime(0.0001, t);
+    gn.gain.linearRampToValueAtTime(g, t + 0.02);
+    gn.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(lp); lp.connect(gn); gn.connect(this.busMusic);
+    o.start(t); o.stop(t + dur + 0.02);
   };
   Sound.prototype.drum = function (t, g, kind) {
     const ctx = this.ctx;
@@ -5755,6 +6026,8 @@ void main(){
   const MODES = {
     free: {
       id: 'free', name: 'V libre', blurb: 'Sin cronómetro: rodadura libre con tráfico IA',
+      info: 'sin cronómetro · 4 coches de tráfico · fuera de pista permitido',
+      win: 'sin metas: rodar, aprender los pianos o probar el coche',
       laps: 0, rivals: 4, aiSpeed: 0.78, strictWalls: false, live: false,
       hud(g) {
         return [
@@ -5768,6 +6041,8 @@ void main(){
     },
     race: {
       id: 'race', name: 'Carrera', blurb: 'Vueltas contra 5 rivales de IA, posición en vivo',
+      info: '3 vueltas (2-8 en el menú) · 5 rivales · cuenta atrás de 3 s',
+      win: 'cruzar 1º; el puesto se calcula con el progreso de vuelta',
       laps: 3, rivals: 5, aiSpeed: 1.0, strictWalls: true, live: true,
       setup(g) { g.state.countdown = 3.4; g.state.go = false; },
       update(g, dt) {
@@ -5795,6 +6070,8 @@ void main(){
     },
     drift: {
       id: 'drift', name: 'Drift Attack', blurb: '90 segundos sumando ángulo y velocidad',
+      info: '90 s · 0 rivales · cadena si no tocas nada',
+      win: 'ángulo × velocidad encadenado: suelta el derrape antes de que baje a 0',
       laps: 0, rivals: 0, aiSpeed: 0, strictWalls: true, live: true, timed: 90,
       setup(g) { g.driftHud = { cur: 0, total: 0, chain: 1, tube: 0, cool: 0 }; },
       update(g, dt) {
@@ -5832,6 +6109,8 @@ void main(){
     },
     attack: {
       id: 'attack', name: 'Crono CPA', blurb: 'cada checkpoint suma tiempo; no te pares',
+      info: 'reloj 32 s · +12 s por checkpoint · 0 rivales · muros duros',
+      win: 'sumar checkpoints sin parar; con el reloj a 0 se acabó',
       laps: 0, rivals: 0, aiSpeed: 0, strictWalls: true, live: true, startClock: 32, perCk: 12,
       setup(g) { g.state.clock = g.state.timeLeft = 32; g.state.ckHit = 0; },
       update(g, dt) {
@@ -5860,6 +6139,8 @@ void main(){
     },
     chase: {
       id: 'chase', name: 'Persecución', blurb: 'Eres la patrulla: intercepta a los 4 fugados',
+      info: '130 s · 4 fugados · eres la patrulla · detención por contacto',
+      win: 'pegarte menos de 7 m durante 1,5 s a cada fugado',
       laps: 0, rivals: 4, aiSpeed: 0.97, strictWalls: true, live: true, timed: 130, police: true,
       setup(g) {
         g.state.catches = 0; g.state.target = 4; g.state.clock = 0;
@@ -5918,6 +6199,8 @@ void main(){
     this.state = {}; this.running = false; this.paused = false;
     this.showMap = true; this.lightsOn = true; this.driftMode = o.driftMode || 'manual';
     this.clock = 0; this.dt = 0; this.boostFx = 0; this.warnText = '';
+    this.musicOn = G.store.get('cw_music', true) !== false;
+    this.musicI = 0.42; this._mAmt = -1;
     this.acc = 0; this.frames = 0; this.fpsT = 0; this.fps = 60;
     this.cam = { pos: [0, 4, -10], look: [0, 1, 10], fov: 62, shake: 0, orbit: 0, roll: 0, shakeOff: [0, 0, 0], up: [0, 1, 0] };
     this.matCache = [];
@@ -5967,11 +6250,15 @@ void main(){
       this.cars.forEach((c, i) => { if (i > 0) c.isCop = false; });
       player.isCop = true;
     }
-    /* voces de audio por coche (máx 6) */
-    if (this.sound.ok) {
-      this.sound.stopVoices();
-      this.cars.slice(0, 6).forEach((c, i) => this.sound.addCar({ name: c.name, player: i === 0 }));
-    }
+    /* voces de audio por coche (máx 6): una por motor. addCar encola si el
+       AudioContext aún no ha arrancado (lo hace el primer gesto del usuario). */
+    this.sound.stopVoices();
+    this.sndCars = this.cars.slice(0, 6);
+    this.sndCars.forEach((c, i) => this.sound.addCar({
+      name: c.name, player: i === 0,
+      cyl: c.stats.cyl || 6, redline: c.stats.redline || 7000, drive: c.stats.drive || 'rwd',
+      turbo: (c.stats.boost || 1) > 1.02
+    }));
     /* estado de carrera */
     this.state = { clock: 0, timeLimit: this.modeDef.timed ? this.modeDef.timed : 1e9, ckNext: 1, lapDone: 0, finished: false, score: 0, catches: 0, target: 0 };
     this.laps = opts.laps || this.modeDef.laps || 3;
@@ -6081,6 +6368,11 @@ void main(){
     if (this.opts.particles !== false) {
       const drifting = p.drifting;
       if (drifting) G.Effects.tireSmoke(this.fx, p, W, clamp(Math.abs(p.vr) / 9, 0.25, 1));
+      else if ((p.wheelspin || 0) > 0.22) {
+        /* salida en pazos: humo en el eje motriz (no es lo mismo un V8 trasero
+           que un 4x4: además de oírse se ve) */
+        G.Effects.tireSmoke(this.fx, p, W, clamp((p.wheelspin || 0) * 0.85, 0.22, 0.9), p.stats.drive === 'fwd' ? 'f' : 'r');
+      }
       /* los rivales fuera del asfalto también levantan polvo (antes sólo el jugador) */
       for (let oi = 1; oi < this.cars.length && oi < 7; oi++) {
         const o = this.cars[oi];
@@ -6095,6 +6387,7 @@ void main(){
       for (let i = 1; i < Math.min(this.cars.length, 6); i++) {
         const c = this.cars[i];
         if (c.drifting && Math.abs(c.vr) > 4) G.Effects.tireSmoke(this.fx, c, W, 0.45);
+        else if ((c.wheelspin || 0) > 0.55) G.Effects.tireSmoke(this.fx, c, W, 0.4, c.stats.drive === 'fwd' ? 'f' : 'r');
         else G.Effects.dustTrail(this.fx, c, W);
       }
       this.fx.update(dt, W);
@@ -6485,6 +6778,7 @@ void main(){
     let dt = (now - this._last) / 1000;
     this._last = now;
     if (dt > 0.25) dt = 0.25;
+    if (!(dt > 0)) dt = 0;                 /* ts repetido o fuera de orden: no integrar hacia atrás */
     this.dt = dt;
     this.frames++; this.fpsT += dt;
     if (this.fpsT > 0.5) { this.fps = this.frames / this.fpsT; this.frames = 0; this.fpsT = 0; if (this.autoQual) this.adapt(); }
@@ -6504,6 +6798,9 @@ void main(){
       if (guard >= maxSteps) this.acc = 0;
       this.updateCam(dt);
     }
+    if (!this.paused) this.updateSound(dt);
+    else if (this.sound.ok && this.sndCars) this.sound.update(this.sndCars,
+      { x: this.cam.pos[0], z: this.cam.pos[2], yaw: this.player ? this.player.yaw : 0 }, 0, { skidVol: 0, intensity: 0.05 });
     if (this.world) this.draw();
     if (!this.headless) this._raf = requestAnimationFrame(t => this.frame(t));
   };
@@ -6528,6 +6825,44 @@ void main(){
     this.fx.setCap(q === 'low' ? 320 : (q === 'med' ? 640 : 900));
     this.hStep = q === 'low' ? 1 / 100 : 1 / 120;
   };
+  /* ------------------------------------------------------------------ *
+   *  Audio por fotograma: tu motor, el de los rivales (distancia +
+   *  panorámica) y la música, que sube cuando la carrera aprieta.
+   * ------------------------------------------------------------------ */
+  Game.prototype.updateSound = function (dt) {
+    const S = this.sound;
+    if (!S.ok || !this.cars.length || !this.player) return;
+    const p = this.player, st = this.state || {};
+    let near = 1e9;
+    for (let i = 1; i < this.cars.length; i++) {
+      const c = this.cars[i];
+      if (c.caught > 0) continue;
+      const d = Math.hypot(c.pos[0] - p.pos[0], c.pos[2] - p.pos[2]);
+      if (d < near) near = d;
+    }
+    const press = clamp(1 - near / 55, 0, 1);                 /* un rival pegado */
+    const spdK = clamp(p.speed / Math.max(12, p.stats.top / 3.6), 0, 1);
+    const lastLap = (st.lapDone || 0) >= this.laps - 1 ? 0.20 : 0;
+    let inten = 0.16 + press * 0.44 + spdK * 0.28 + lastLap + clamp(p.damage, 0, 1) * 0.10;
+    if (st.countdown > 0) inten = 0.10;
+    if (st.finished) inten = 0.12;
+    this.musicI = G.damp(this.musicI, clamp(inten, 0, 1), 1.1, dt);
+    S.update(this.sndCars || (this.sndCars = this.cars.slice(0, 6)), { x: this.cam.pos[0], z: this.cam.pos[2], yaw: p.yaw }, dt,
+      { skidVol: 0.5, intensity: this.musicI });
+    /* la música: nivel ligado a la acción, sólo cuando cambia de verdad */
+    const amt = 0.050 + 0.070 * this.musicI;
+    if (Math.abs(amt - this._mAmt) > 0.006) {
+      this._mAmt = amt;
+      if (this.musicOn && !this.paused) S.setMusic(true, amt);
+    }
+  };
+  Game.prototype.setMusic = function (on, quiet) {
+    this.musicOn = !!on;
+    G.store.set('cw_music', this.musicOn);
+    this._mAmt = -1;
+    this.sound.setMusic(this.musicOn && !this.paused, this.musicOn ? 0.068 : 0);
+    if (!quiet) this.hud && this.hud.toast(this.musicOn ? 'música: sí' : 'música: no', 1.0);
+  };
   Game.prototype.setMuted = function (m) {
     this.sound.setMuted(m);
     G.store.set('cw_mute', m);
@@ -6542,14 +6877,33 @@ void main(){
         this.screens.show('pause');
       } else this.screens.show('');
     }
-    this.sound.ok && this.sound.setMusic(!this.paused, 0.1);
+    this.sound.ok && this.sound.setMusic(!this.paused && this.musicOn, 0.055 + 0.070 * (this.musicI || 0.4));
   };
   Game.prototype.hudLinesHtml = function () {
-    const p = this.player;
+    const p = this.player, s = p.stats, st = this.state || {};
+    const gap = this.rivalGap ? this.rivalGap() : null;
     return '<div>velocidad <b>' + Math.round(p.speed * 3.6) + ' km/h</b></div>' +
-      '<div>daño <b>' + Math.round(p.damage * 100) + '%</b></div>' +
-      '<div>vuelta <b>' + (p.lap + 1) + '</b> · puesto <b>' + (p.place || 1) + '</b></div>' +
-      (this.modeDef.timed ? '<div>restante <b>' + Math.max(0, this.state.timeLimit - this.state.clock).toFixed(1) + ' s</b></div>' : '');
+      '<div>Marcha <b>' + (p.gearN || 1) + '/' + (s.gears || 5) + '</b> · ' +
+      '<b>' + Math.round(p.engineRPM || 800) + '</b> rpm (' + (s.cyl || 6) + ' cil · ' + ((s.redline || 7000) / 1000) + 'k)</div>' +
+      '<div>motor <b>' + ({ rwd: 'tracción trasera', fwd: 'delantera', awd: '4x4' }[s.drive] || '—') +
+      '</b> · <b>' + (s.mass || 0) + ' kg</b> · frenos <b>' + Math.round((s.brake || 1) * 100) + '%</b></div>' +
+      '<div>daño <b>' + Math.round(p.damage * 100) + '%</b> · derrape <b>' + Math.round(Math.abs(p.slipAngle) * 57.3) + '°</b></div>' +
+      '<div>vuelta <b>' + (p.lap + 1) + '</b> · puesto <b>' + (p.place || 1) + '</b>' + (gap ? ' · ' + gap : '') + '</div>' +
+      (this.modeDef.timed ? '<div>restante <b>' + G.fmtTime(Math.max(0, st.timeLimit - st.clock)) + '</b></div>' : '');
+  };
+  /* «a qué distancia vas del de delante/detrás», para el panel de pausa */
+  Game.prototype.rivalGap = function () {
+    const p = this.player;
+    if (!p || p.totalProgress == null) return null;
+    let ahead = null, behind = null;
+    for (const c of this.cars) {
+      if (c === p) continue;
+      const d = (c.totalProgress || 0) - (p.totalProgress || 0);
+      if (d > 0 && (ahead === null || d < ahead)) ahead = d;
+      if (d < 0 && (behind === null || d > behind)) behind = d;
+    }
+    const f = (m) => Math.abs(m) < 1 ? Math.round(m * 1000) / 1000 + ' km' : Math.round(m) + ' m';
+    return (ahead !== null ? '+' + f(ahead) : 'líder') + ' / ' + (behind !== null ? '−' + f(-behind) : 'sin perseguidor');
   };
   Game.prototype.hudLines = function () { return this.modeDef.hud ? this.modeDef.hud(this) : []; };
 
@@ -6575,7 +6929,7 @@ void main(){
       again() { game.spawn(game.lastCar, game.lastOpts); game.running = true; screens.show(''); },
       pick() { }
     });
-    screens.fill(G.MAP_MENU(), G.MODE_LIST.map(m => ({ id: m.id, name: m.name, blurb: m.blurb })),
+    screens.fill(G.MAP_MENU(), G.MODE_LIST.map(m => ({ id: m.id, name: m.name, blurb: m.blurb, info: m.info, win: m.win })),
       G.CARS.map(c => ({ id: c.id, name: c.name, blurb: c.desc, stats: c.stats })), game.records);
     screens.show('menu');
     let touch = null;
@@ -6596,8 +6950,8 @@ void main(){
       game.loadMap(spec, (p, label) => { els.progress && els.progress(p, label); });
       game.spawn(ch.car, game.lastOpts);
       game.sound.resume();
-      game.sound.setMuted(!!opts.sound === false);
-      if (opts.sound !== false) game.sound.setMusic(true, 0.09);
+      game.sound.setMuted(opts.sound === false);
+      game.setMusic(opts.sound !== false && opts.music !== false, true);
       game.running = true; game.paused = false;
       screens.show('');
       els.canvas && els.canvas.focus && els.canvas.focus();
@@ -6664,7 +7018,12 @@ void main(){
   window.addEventListener('resize', resize); resize();
 
   /* el primer gesto desbloquea el audio */
-  var unlock = function () { game.sound.resume(); D.removeEventListener('pointerdown', unlock); D.removeEventListener('keydown', unlock); };
+  var unlock = function () {
+    game.sound.resume();
+    /* menú con música de fondo desde el primer gesto (si el usuario no la apagó) */
+    if (game.musicOn !== false) game.sound.setMusic(true, 0.055);
+    D.removeEventListener('pointerdown', unlock); D.removeEventListener('keydown', unlock);
+  };
   D.addEventListener('pointerdown', unlock); D.addEventListener('keydown', unlock);
 
   try {
@@ -6702,14 +7061,29 @@ void main(){
     game.frame();
     /* HUD superior: modo/mapa/fps en vivo */
     var tl = D.getElementById('topleft');
+    function bdg(k, v) { return '<div class="badge">' + k + ' <b>' + v + '</b></div>'; }
     setInterval(function () {
       fpsEl.textContent = Math.round(game.fps) + ' fps · ' + (R.stats ? R.stats.draws : 0) + ' draws · ' + ((R.stats ? R.stats.tris : 0) / 1000 | 0) + 'k tris';
-      if (!game.world) return;
-      var p = game.player, q = p ? Math.round(p.speed * 3.6) : 0;
-      tl.innerHTML = '<div class="badge">circuito <b>' + game.spec.name + '</b></div>' +
-        '<div class="badge">modo <b>' + game.mode.name + '</b></div>' +
-        '<div class="badge">marcha <b>' + (p ? 'M' + Math.max(1, Math.min(6, 1 + Math.round(Math.log(Math.max(1, q)) / Math.log(70)))) : '-') + '</b></div>';
-    }, 500);
+      if (!game.world || !game.mode) { tl.innerHTML = ''; return; }
+      var p = game.player, md = game.modeDef || game.mode, st = game.state || {};
+      var params = [];
+      if (md.laps) params.push(game.laps + ' vueltas');
+      if (md.timed) params.push(md.timed + ' s');
+      if (md.startClock) params.push('+' + md.perCk + ' s por punto');
+      params.push((md.rivals || 0) + ' rivales');
+      var pos = '—';
+      if (p) {
+        var gap = game.rivalGap ? game.rivalGap() : null;
+        pos = (p.place || 1) + 'º/' + game.cars.length + (gap ? ' · ' + gap : '');
+      }
+      var t = (md.win || '') + (md.info ? ' — ' + md.info : '');
+      tl.innerHTML = bdg('circuito', game.spec.name) +
+        '<div class="badge" title="' + t.replace(/"/g, '') + '">modo <b>' + game.mode.name + '</b></div>' +
+        bdg('ajuste', params.join(' · ')) +
+        bdg('clasificación', pos) +
+        (st.countdown > 0 ? bdg('salida', Math.ceil(st.countdown) + '') : '') +
+        (st.finished ? bdg('resultado', 'cerrado') : '');
+    }, 400);
     /* errores de runtime a la consola + aviso en pantalla */
     window.__cwOnError = function (m) {
       if (!m || /ResizeObserver|AudioContext/.test(m)) return;

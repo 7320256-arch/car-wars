@@ -19,8 +19,10 @@
       cabin: { front: 0.30, back: -0.62, h1: 0.50, h2: 0.90, hw: 0.80 },
       style: 'coupe',
       color: '#d8203a', color2: '#16181d',
-      stats: { power: 1.00, grip: 1.03, brake: 1.00, mass: 1280, top: 236, downforce: 0.9, drift: 1.0, gear: 5.2 }
-    },
+      stats: { power: 1.00, grip: 1.03, brake: 1.00, mass: 1280, top: 236, downforce: 0.9, drift: 1.00, gear: 5.2,
+        gears: 6, redline: 7200, cyl: 6, drive: 'rwd', balance: 0.05, agility: 1.00, ride: 0.55, boost: 1.00,
+        offRoad: 0.75, fragility: 1.00, torqueK: 1.00 },
+          },
     {
       id: 'muscle', name: 'Hammer V8', cls: 'Muscle',
       desc: 'Bestial en recta, sobreviraje brutal. Derrapa de maravilla.',
@@ -28,8 +30,10 @@
       cabin: { front: 0.14, back: -0.78, h1: 0.55, h2: 0.96, hw: 0.84 },
       style: 'muscle',
       color: '#f2a10c', color2: '#101114',
-      stats: { power: 1.20, grip: 0.90, brake: 0.94, mass: 1660, top: 250, downforce: 0.5, drift: 1.35, gear: 4.6 }
-    },
+      stats: { power: 1.22, grip: 0.90, brake: 0.94, mass: 1660, top: 252, downforce: 0.5, drift: 1.35, gear: 4.6,
+        gears: 4, redline: 6400, cyl: 8, drive: 'rwd', balance: 0.42, agility: 0.84, ride: 0.86, boost: 1.16,
+        offRoad: 0.62, fragility: 1.10, torqueK: 1.14 },
+          },
     {
       id: 'hatch', name: 'Pixel Turbo', cls: 'Hot Hatch',
       desc: 'Pequeño, ágil y pegajoso. Rey de los tramos lentos.',
@@ -37,8 +41,10 @@
       cabin: { front: 0.34, back: -0.90, h1: 0.55, h2: 1.10, hw: 0.83 },
       style: 'hatch',
       color: '#1e9bff', color2: '#141619',
-      stats: { power: 0.88, grip: 1.12, brake: 1.05, mass: 1090, top: 208, downforce: 0.6, drift: 1.15, gear: 5.8 }
-    },
+      stats: { power: 0.88, grip: 1.12, brake: 1.05, mass: 1090, top: 208, downforce: 0.6, drift: 1.15, gear: 5.8,
+        gears: 5, redline: 8200, cyl: 3, drive: 'fwd', balance: -0.34, agility: 1.22, ride: 0.62, boost: 1.08,
+        offRoad: 0.70, fragility: 0.92, torqueK: 0.96 },
+          },
     {
       id: 'suv', name: 'Grizzly 4x4', cls: 'SUV',
       desc: 'Pesado pero imparable: perdona errores y golpea fuerte.',
@@ -46,8 +52,10 @@
       cabin: { front: 0.20, back: -0.92, h1: 0.66, h2: 1.28, hw: 0.90 },
       style: 'suv',
       color: '#2f7d4f', color2: '#101215',
-      stats: { power: 1.02, grip: 0.86, brake: 0.90, mass: 2150, top: 212, downforce: 0.35, drift: 0.8, gear: 4.2 }
-    },
+      stats: { power: 1.02, grip: 0.86, brake: 0.90, mass: 2150, top: 214, downforce: 0.35, drift: 0.80, gear: 4.2,
+        gears: 6, redline: 5000, cyl: 4, drive: 'awd', balance: 0.02, agility: 0.76, ride: 1.18, boost: 1.22,
+        offRoad: 1.00, fragility: 0.80, torqueK: 1.22 },
+          },
     {
       id: 'proto', name: 'NF-01 Evo', cls: 'Prototipo',
       desc: 'Aerodinámica extrema y potencia bruta. Sólo para expertos.',
@@ -55,8 +63,10 @@
       cabin: { front: 0.10, back: -0.70, h1: 0.44, h2: 0.80, hw: 0.62 },
       style: 'proto',
       color: '#e6e9ee', color2: '#1a1d24',
-      stats: { power: 1.34, grip: 1.17, brake: 1.10, mass: 1010, top: 292, downforce: 1.6, drift: 0.95, gear: 6.0 }
-    }
+      stats: { power: 1.34, grip: 1.17, brake: 1.10, mass: 1010, top: 294, downforce: 1.60, drift: 0.95, gear: 6.0,
+        gears: 7, redline: 11000, cyl: 6, drive: 'awd', balance: -0.08, agility: 1.08, ride: 0.30, boost: 1.34,
+        offRoad: 0.68, fragility: 1.35, torqueK: 0.92 },
+          }
   ];
   G.CARS = CARS;
 

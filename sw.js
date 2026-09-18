@@ -1,4 +1,4 @@
-const CACHE_NAME = 'car-wars-v1';
+const CACHE_NAME = 'car-wars-v2';
 const APP_SHELL = [
   './', './index.html', './manifest.webmanifest', './favicon.svg', './apple-touch-icon.png',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png',

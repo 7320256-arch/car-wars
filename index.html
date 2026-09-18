@@ -133,7 +133,12 @@ window.__cwBoot = function (ok, msg, detail) {
   window.addEventListener('resize', resize); resize();
 
   /* el primer gesto desbloquea el audio */
-  var unlock = function () { game.sound.resume(); D.removeEventListener('pointerdown', unlock); D.removeEventListener('keydown', unlock); };
+  var unlock = function () {
+    game.sound.resume();
+    /* menú con música de fondo desde el primer gesto (si el usuario no la apagó) */
+    if (game.musicOn !== false) game.sound.setMusic(true, 0.055);
+    D.removeEventListener('pointerdown', unlock); D.removeEventListener('keydown', unlock);
+  };
   D.addEventListener('pointerdown', unlock); D.addEventListener('keydown', unlock);
 
   try {
@@ -171,14 +176,29 @@ window.__cwBoot = function (ok, msg, detail) {
     game.frame();
     /* HUD superior: modo/mapa/fps en vivo */
     var tl = D.getElementById('topleft');
+    function bdg(k, v) { return '<div class="badge">' + k + ' <b>' + v + '</b></div>'; }
     setInterval(function () {
       fpsEl.textContent = Math.round(game.fps) + ' fps · ' + (R.stats ? R.stats.draws : 0) + ' draws · ' + ((R.stats ? R.stats.tris : 0) / 1000 | 0) + 'k tris';
-      if (!game.world) return;
-      var p = game.player, q = p ? Math.round(p.speed * 3.6) : 0;
-      tl.innerHTML = '<div class="badge">circuito <b>' + game.spec.name + '</b></div>' +
-        '<div class="badge">modo <b>' + game.mode.name + '</b></div>' +
-        '<div class="badge">marcha <b>' + (p ? 'M' + Math.max(1, Math.min(6, 1 + Math.round(Math.log(Math.max(1, q)) / Math.log(70)))) : '-') + '</b></div>';
-    }, 500);
+      if (!game.world || !game.mode) { tl.innerHTML = ''; return; }
+      var p = game.player, md = game.modeDef || game.mode, st = game.state || {};
+      var params = [];
+      if (md.laps) params.push(game.laps + ' vueltas');
+      if (md.timed) params.push(md.timed + ' s');
+      if (md.startClock) params.push('+' + md.perCk + ' s por punto');
+      params.push((md.rivals || 0) + ' rivales');
+      var pos = '—';
+      if (p) {
+        var gap = game.rivalGap ? game.rivalGap() : null;
+        pos = (p.place || 1) + 'º/' + game.cars.length + (gap ? ' · ' + gap : '');
+      }
+      var t = (md.win || '') + (md.info ? ' — ' + md.info : '');
+      tl.innerHTML = bdg('circuito', game.spec.name) +
+        '<div class="badge" title="' + t.replace(/"/g, '') + '">modo <b>' + game.mode.name + '</b></div>' +
+        bdg('ajuste', params.join(' · ')) +
+        bdg('clasificación', pos) +
+        (st.countdown > 0 ? bdg('salida', Math.ceil(st.countdown) + '') : '') +
+        (st.finished ? bdg('resultado', 'cerrado') : '');
+    }, 400);
     /* errores de runtime a la consola + aviso en pantalla */
     window.__cwOnError = function (m) {
       if (!m || /ResizeObserver|AudioContext/.test(m)) return;

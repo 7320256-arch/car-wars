@@ -99,7 +99,7 @@ function makeCanvas(w, h) {
   return c;
 }
 global.window = global;
-global.navigator = { maxTouchPoints: 0, userAgent: 'node', hardwareConcurrency: 4 };
+Object.defineProperty(global, 'navigator', { configurable: true, value: { maxTouchPoints: 0, userAgent: 'node', hardwareConcurrency: 4 } });
 global.devicePixelRatio = 1;
 global.innerWidth = 1280; global.innerHeight = 720;
 global.document = {

@@ -12,6 +12,8 @@
   const MODES = {
     free: {
       id: 'free', name: 'V libre', blurb: 'Sin cronómetro: rodadura libre con tráfico IA',
+      info: 'sin cronómetro · 4 coches de tráfico · fuera de pista permitido',
+      win: 'sin metas: rodar, aprender los pianos o probar el coche',
       laps: 0, rivals: 4, aiSpeed: 0.78, strictWalls: false, live: false,
       hud(g) {
         return [
@@ -25,6 +27,8 @@
     },
     race: {
       id: 'race', name: 'Carrera', blurb: 'Vueltas contra 5 rivales de IA, posición en vivo',
+      info: '3 vueltas (2-8 en el menú) · 5 rivales · cuenta atrás de 3 s',
+      win: 'cruzar 1º; el puesto se calcula con el progreso de vuelta',
       laps: 3, rivals: 5, aiSpeed: 1.0, strictWalls: true, live: true,
       setup(g) { g.state.countdown = 3.4; g.state.go = false; },
       update(g, dt) {
@@ -52,6 +56,8 @@
     },
     drift: {
       id: 'drift', name: 'Drift Attack', blurb: '90 segundos sumando ángulo y velocidad',
+      info: '90 s · 0 rivales · cadena si no tocas nada',
+      win: 'ángulo × velocidad encadenado: suelta el derrape antes de que baje a 0',
       laps: 0, rivals: 0, aiSpeed: 0, strictWalls: true, live: true, timed: 90,
       setup(g) { g.driftHud = { cur: 0, total: 0, chain: 1, tube: 0, cool: 0 }; },
       update(g, dt) {
@@ -89,6 +95,8 @@
     },
     attack: {
       id: 'attack', name: 'Crono CPA', blurb: 'cada checkpoint suma tiempo; no te pares',
+      info: 'reloj 32 s · +12 s por checkpoint · 0 rivales · muros duros',
+      win: 'sumar checkpoints sin parar; con el reloj a 0 se acabó',
       laps: 0, rivals: 0, aiSpeed: 0, strictWalls: true, live: true, startClock: 32, perCk: 12,
       setup(g) { g.state.clock = g.state.timeLeft = 32; g.state.ckHit = 0; },
       update(g, dt) {
@@ -117,6 +125,8 @@
     },
     chase: {
       id: 'chase', name: 'Persecución', blurb: 'Eres la patrulla: intercepta a los 4 fugados',
+      info: '130 s · 4 fugados · eres la patrulla · detención por contacto',
+      win: 'pegarte menos de 7 m durante 1,5 s a cada fugado',
       laps: 0, rivals: 4, aiSpeed: 0.97, strictWalls: true, live: true, timed: 130, police: true,
       setup(g) {
         g.state.catches = 0; g.state.target = 4; g.state.clock = 0;
@@ -175,6 +185,8 @@
     this.state = {}; this.running = false; this.paused = false;
     this.showMap = true; this.lightsOn = true; this.driftMode = o.driftMode || 'manual';
     this.clock = 0; this.dt = 0; this.boostFx = 0; this.warnText = '';
+    this.musicOn = G.store.get('cw_music', true) !== false;
+    this.musicI = 0.42; this._mAmt = -1;
     this.acc = 0; this.frames = 0; this.fpsT = 0; this.fps = 60;
     this.cam = { pos: [0, 4, -10], look: [0, 1, 10], fov: 62, shake: 0, orbit: 0, roll: 0, shakeOff: [0, 0, 0], up: [0, 1, 0] };
     this.matCache = [];
@@ -224,11 +236,15 @@
       this.cars.forEach((c, i) => { if (i > 0) c.isCop = false; });
       player.isCop = true;
     }
-    /* voces de audio por coche (máx 6) */
-    if (this.sound.ok) {
-      this.sound.stopVoices();
-      this.cars.slice(0, 6).forEach((c, i) => this.sound.addCar({ name: c.name, player: i === 0 }));
-    }
+    /* voces de audio por coche (máx 6): una por motor. addCar encola si el
+       AudioContext aún no ha arrancado (lo hace el primer gesto del usuario). */
+    this.sound.stopVoices();
+    this.sndCars = this.cars.slice(0, 6);
+    this.sndCars.forEach((c, i) => this.sound.addCar({
+      name: c.name, player: i === 0,
+      cyl: c.stats.cyl || 6, redline: c.stats.redline || 7000, drive: c.stats.drive || 'rwd',
+      turbo: (c.stats.boost || 1) > 1.02
+    }));
     /* estado de carrera */
     this.state = { clock: 0, timeLimit: this.modeDef.timed ? this.modeDef.timed : 1e9, ckNext: 1, lapDone: 0, finished: false, score: 0, catches: 0, target: 0 };
     this.laps = opts.laps || this.modeDef.laps || 3;
@@ -338,6 +354,11 @@
     if (this.opts.particles !== false) {
       const drifting = p.drifting;
       if (drifting) G.Effects.tireSmoke(this.fx, p, W, clamp(Math.abs(p.vr) / 9, 0.25, 1));
+      else if ((p.wheelspin || 0) > 0.22) {
+        /* salida en pazos: humo en el eje motriz (no es lo mismo un V8 trasero
+           que un 4x4: además de oírse se ve) */
+        G.Effects.tireSmoke(this.fx, p, W, clamp((p.wheelspin || 0) * 0.85, 0.22, 0.9), p.stats.drive === 'fwd' ? 'f' : 'r');
+      }
       /* los rivales fuera del asfalto también levantan polvo (antes sólo el jugador) */
       for (let oi = 1; oi < this.cars.length && oi < 7; oi++) {
         const o = this.cars[oi];
@@ -352,6 +373,7 @@
       for (let i = 1; i < Math.min(this.cars.length, 6); i++) {
         const c = this.cars[i];
         if (c.drifting && Math.abs(c.vr) > 4) G.Effects.tireSmoke(this.fx, c, W, 0.45);
+        else if ((c.wheelspin || 0) > 0.55) G.Effects.tireSmoke(this.fx, c, W, 0.4, c.stats.drive === 'fwd' ? 'f' : 'r');
         else G.Effects.dustTrail(this.fx, c, W);
       }
       this.fx.update(dt, W);
@@ -742,6 +764,7 @@
     let dt = (now - this._last) / 1000;
     this._last = now;
     if (dt > 0.25) dt = 0.25;
+    if (!(dt > 0)) dt = 0;                 /* ts repetido o fuera de orden: no integrar hacia atrás */
     this.dt = dt;
     this.frames++; this.fpsT += dt;
     if (this.fpsT > 0.5) { this.fps = this.frames / this.fpsT; this.frames = 0; this.fpsT = 0; if (this.autoQual) this.adapt(); }
@@ -761,6 +784,9 @@
       if (guard >= maxSteps) this.acc = 0;
       this.updateCam(dt);
     }
+    if (!this.paused) this.updateSound(dt);
+    else if (this.sound.ok && this.sndCars) this.sound.update(this.sndCars,
+      { x: this.cam.pos[0], z: this.cam.pos[2], yaw: this.player ? this.player.yaw : 0 }, 0, { skidVol: 0, intensity: 0.05 });
     if (this.world) this.draw();
     if (!this.headless) this._raf = requestAnimationFrame(t => this.frame(t));
   };
@@ -785,6 +811,44 @@
     this.fx.setCap(q === 'low' ? 320 : (q === 'med' ? 640 : 900));
     this.hStep = q === 'low' ? 1 / 100 : 1 / 120;
   };
+  /* ------------------------------------------------------------------ *
+   *  Audio por fotograma: tu motor, el de los rivales (distancia +
+   *  panorámica) y la música, que sube cuando la carrera aprieta.
+   * ------------------------------------------------------------------ */
+  Game.prototype.updateSound = function (dt) {
+    const S = this.sound;
+    if (!S.ok || !this.cars.length || !this.player) return;
+    const p = this.player, st = this.state || {};
+    let near = 1e9;
+    for (let i = 1; i < this.cars.length; i++) {
+      const c = this.cars[i];
+      if (c.caught > 0) continue;
+      const d = Math.hypot(c.pos[0] - p.pos[0], c.pos[2] - p.pos[2]);
+      if (d < near) near = d;
+    }
+    const press = clamp(1 - near / 55, 0, 1);                 /* un rival pegado */
+    const spdK = clamp(p.speed / Math.max(12, p.stats.top / 3.6), 0, 1);
+    const lastLap = (st.lapDone || 0) >= this.laps - 1 ? 0.20 : 0;
+    let inten = 0.16 + press * 0.44 + spdK * 0.28 + lastLap + clamp(p.damage, 0, 1) * 0.10;
+    if (st.countdown > 0) inten = 0.10;
+    if (st.finished) inten = 0.12;
+    this.musicI = G.damp(this.musicI, clamp(inten, 0, 1), 1.1, dt);
+    S.update(this.sndCars || (this.sndCars = this.cars.slice(0, 6)), { x: this.cam.pos[0], z: this.cam.pos[2], yaw: p.yaw }, dt,
+      { skidVol: 0.5, intensity: this.musicI });
+    /* la música: nivel ligado a la acción, sólo cuando cambia de verdad */
+    const amt = 0.050 + 0.070 * this.musicI;
+    if (Math.abs(amt - this._mAmt) > 0.006) {
+      this._mAmt = amt;
+      if (this.musicOn && !this.paused) S.setMusic(true, amt);
+    }
+  };
+  Game.prototype.setMusic = function (on, quiet) {
+    this.musicOn = !!on;
+    G.store.set('cw_music', this.musicOn);
+    this._mAmt = -1;
+    this.sound.setMusic(this.musicOn && !this.paused, this.musicOn ? 0.068 : 0);
+    if (!quiet) this.hud && this.hud.toast(this.musicOn ? 'música: sí' : 'música: no', 1.0);
+  };
   Game.prototype.setMuted = function (m) {
     this.sound.setMuted(m);
     G.store.set('cw_mute', m);
@@ -799,14 +863,33 @@
         this.screens.show('pause');
       } else this.screens.show('');
     }
-    this.sound.ok && this.sound.setMusic(!this.paused, 0.1);
+    this.sound.ok && this.sound.setMusic(!this.paused && this.musicOn, 0.055 + 0.070 * (this.musicI || 0.4));
   };
   Game.prototype.hudLinesHtml = function () {
-    const p = this.player;
+    const p = this.player, s = p.stats, st = this.state || {};
+    const gap = this.rivalGap ? this.rivalGap() : null;
     return '<div>velocidad <b>' + Math.round(p.speed * 3.6) + ' km/h</b></div>' +
-      '<div>daño <b>' + Math.round(p.damage * 100) + '%</b></div>' +
-      '<div>vuelta <b>' + (p.lap + 1) + '</b> · puesto <b>' + (p.place || 1) + '</b></div>' +
-      (this.modeDef.timed ? '<div>restante <b>' + Math.max(0, this.state.timeLimit - this.state.clock).toFixed(1) + ' s</b></div>' : '');
+      '<div>Marcha <b>' + (p.gearN || 1) + '/' + (s.gears || 5) + '</b> · ' +
+      '<b>' + Math.round(p.engineRPM || 800) + '</b> rpm (' + (s.cyl || 6) + ' cil · ' + ((s.redline || 7000) / 1000) + 'k)</div>' +
+      '<div>motor <b>' + ({ rwd: 'tracción trasera', fwd: 'delantera', awd: '4x4' }[s.drive] || '—') +
+      '</b> · <b>' + (s.mass || 0) + ' kg</b> · frenos <b>' + Math.round((s.brake || 1) * 100) + '%</b></div>' +
+      '<div>daño <b>' + Math.round(p.damage * 100) + '%</b> · derrape <b>' + Math.round(Math.abs(p.slipAngle) * 57.3) + '°</b></div>' +
+      '<div>vuelta <b>' + (p.lap + 1) + '</b> · puesto <b>' + (p.place || 1) + '</b>' + (gap ? ' · ' + gap : '') + '</div>' +
+      (this.modeDef.timed ? '<div>restante <b>' + G.fmtTime(Math.max(0, st.timeLimit - st.clock)) + '</b></div>' : '');
+  };
+  /* «a qué distancia vas del de delante/detrás», para el panel de pausa */
+  Game.prototype.rivalGap = function () {
+    const p = this.player;
+    if (!p || p.totalProgress == null) return null;
+    let ahead = null, behind = null;
+    for (const c of this.cars) {
+      if (c === p) continue;
+      const d = (c.totalProgress || 0) - (p.totalProgress || 0);
+      if (d > 0 && (ahead === null || d < ahead)) ahead = d;
+      if (d < 0 && (behind === null || d > behind)) behind = d;
+    }
+    const f = (m) => Math.abs(m) < 1 ? Math.round(m * 1000) / 1000 + ' km' : Math.round(m) + ' m';
+    return (ahead !== null ? '+' + f(ahead) : 'líder') + ' / ' + (behind !== null ? '−' + f(-behind) : 'sin perseguidor');
   };
   Game.prototype.hudLines = function () { return this.modeDef.hud ? this.modeDef.hud(this) : []; };
 
@@ -832,7 +915,7 @@
       again() { game.spawn(game.lastCar, game.lastOpts); game.running = true; screens.show(''); },
       pick() { }
     });
-    screens.fill(G.MAP_MENU(), G.MODE_LIST.map(m => ({ id: m.id, name: m.name, blurb: m.blurb })),
+    screens.fill(G.MAP_MENU(), G.MODE_LIST.map(m => ({ id: m.id, name: m.name, blurb: m.blurb, info: m.info, win: m.win })),
       G.CARS.map(c => ({ id: c.id, name: c.name, blurb: c.desc, stats: c.stats })), game.records);
     screens.show('menu');
     let touch = null;
@@ -853,8 +936,8 @@
       game.loadMap(spec, (p, label) => { els.progress && els.progress(p, label); });
       game.spawn(ch.car, game.lastOpts);
       game.sound.resume();
-      game.sound.setMuted(!!opts.sound === false);
-      if (opts.sound !== false) game.sound.setMusic(true, 0.09);
+      game.sound.setMuted(opts.sound === false);
+      game.setMusic(opts.sound !== false && opts.music !== false, true);
       game.running = true; game.paused = false;
       screens.show('');
       els.canvas && els.canvas.focus && els.canvas.focus();

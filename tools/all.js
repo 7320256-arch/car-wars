@@ -3,7 +3,7 @@
    Uso: node tools/all.js   (o npm-less: desde la carpeta del proyecto) */
 'use strict';
 const cp = require('child_process'), path = require('path');
-const suites = ['check-shaders', 'check-geo', 'check-maps', 'check-physics', 'check-world', 'check-game', 'check-boot'];
+const suites = ['check-shaders', 'check-geo', 'check-maps', 'check-physics', 'check-identity', 'check-world', 'check-game', 'check-boot'];
 let bad = 0;
 for (const s of suites) {
   const t0 = Date.now();

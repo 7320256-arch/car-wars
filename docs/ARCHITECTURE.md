@@ -118,6 +118,54 @@ El campo de alturas del mundo (`W.height`, rejilla 200²) **incluye el peralte y
 inclinación de la calzada** y decae a la cota base fuera de la pista; la malla de terreno
 muestrea esa misma rejilla, así que el coche y lo que se ve coinciden exactamente.
 
+## Identidad de coches (`meshes.js` → `entities.js`)
+
+Cada ficha de `G.CARS[].stats` tiene que estar **consumida por la física**; si un
+número no se lee en `physics()`, el coche es decorativo (así estaba este juego antes
+de esta sección: las barras del menú no cambiaban nada al conducir).
+
+| campo | lo consume | qué hace en el juego |
+|---|---|---|
+| `gears, redline, torqueK, cyl` | `physics()` vía `gearbox()/torqueK()` | caja de marchas real: el corte de encendido es **por marcha**, así que subir de vueltas, cambiar y perder empuje existe. También alimenta el sintetizador del motor |
+| `drive` (`rwd/fwd/awd`) | círculo de fricción en `physics()` | `share` de fuerza de tracción: la trasera patina al salir, la delantera se abre al acelerar, el 4x4 sale clavado |
+| `balance` | autoridad de guiñada + agarre del eje trasero | > 0 = se suelta el culo con el gas (Hammer); < 0 = subvira (Pixel) |
+| `agility` | ángulo de dirección máximo y respuesta | el Pixel vira como un cuchillo, el Grizzly es un autobús |
+| `ride` | cabeceo/alabeo (`pitch/roll`) | el 4x4 se balancea 9,5°, el prototipo 2,4° |
+| `offRoad` | `mu` fuera del asfalto + criterio de la IA | en tierra sólo el 4x4 mantiene la velocidad |
+| `fragility` | daño en muros/sólidos | el NF-01 se abolla un 35 % más con el mismo golpe |
+| `drift` | umbral de liberación del eje trasero | lo fácil/difícil que es sostener un derrape |
+
+Medido por `tools/check-identity.js` (0-100 / 0-200 / punta / patinaje / deriva /
+frenada / daño / ritmo de la IA). Esos números son la línea base: cualquier cambio de
+físicas que los aplaste (todos iguales) ha roto la identidad.
+
+## Audio procedural (`audio.js`)
+
+No hay ficheros de sonido: un `OscillatorNode` + ruido por coche. `Sound.update()`
+**debe llamarse una vez por fotograma** desde `Game.frame()` (cuando eso faltaba, el
+juego tenía motores mudos y música congelada — hay un assert en `check-game.js`,
+bloque 2g, que lo pilla). Cosas que hay que mantener:
+
+- una voz por coche (`spawn()` → `addCar` con `cyl/redline/drive/turbo`); si el
+  `AudioContext` aún no arrancó, `addCar` encola en `pending` y `tryStart()` las crea;
+- el registro sale de los cilindros (`pitch = 1.28 − 0.045·cyl`): V8 129 Hz,
+  tricilíndrico 255 Hz al mismo % de vueltas;
+- los rivales se suavizan a 30 Hz y se panorama por distancia/lado; el tuyo va a 60 Hz;
+- la música no es un bucle fijo: `Game.updateSound()` calcula `musicI` (rivales cerca,
+  velocidad, última vuelta, daño, cuenta atrás) y `tickMusic` le sube el tempo, las
+  capas y el arpegio. El volumen del bus se ajusta desde ahí, no desde el menú.
+
+## Dónde pinta cada cosa en pantalla
+
+- **arriba-izquierda**: sólo el panel del modo (`HUD.draw`, arranca en `yy = 68`).
+- **arriba-centro**: la tira de contexto del DOM (`#topleft` + `.fps`, refill cada 400 ms
+  en `car_wars.html`) — circuito, modo, ajuste (vueltas/rivales/límite), clasificación.
+  En ≤860 px pasa a una fila corta y se oculta el `.fps`.
+- **abajo-derecha**: velocímetro con arco de vueltas, `M{gear}/{gears}` reales, aviso
+  «PATINA» y nitro. **abajo-centro**: `#gearhint`; **arriba-derecha**: minimapa.
+- Regla: un elemento DOM y el canvas HUD nunca comparten esquina. Si añades info,
+  o la metes en la tira DOM o mueves el `yy` del panel.
+
 ## Modos de juego
 
 | modo | regla | victoria/fin |
